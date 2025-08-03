@@ -78,3 +78,33 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+
+# Archivos que pueden causar problemas con Cursor
+*.log
+*.tmp
+*.temp
+.cursor/
+.vscode/
+.idea/
+
+# Archivos de configuración local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos de certificados locales
+*.crt
+*.key
+*.pem
+
+# Archivos de backup
+*.bak
+*.backup
+*~
+
+# Archivos de sistema
+Thumbs.db
+ehthumbs.db
+Desktop.ini
