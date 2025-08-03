@@ -1,39 +1,109 @@
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import { useEffect } from 'react';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AuthService, syncUserWithSupabase } from './authService';
+import { getAuthInstanceAsync, GoogleAuthProvider } from './firebaseConfig';
+import { getUserRoleFromSupabase } from './userFirestore';
 
-WebBrowser.maybeCompleteAuthSession();
+// Configura el Client ID de web SOLO si usas Firebase Auth
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '570692523770-bi0bs3j5fadlboh8ahqc0j7k7jr662t7.apps.googleusercontent.com',
+});
 
-const WEB_CLIENT_ID = '570692523770-biobs3j5fadlb0h8ahqc0j7k7jrj66zt7.apps.googleusercontent.com';
+export default function GoogleSignInButton({ 
+  onSuccess, 
+  onAuthComplete 
+}: { 
+  onSuccess?: (token: string) => void;
+  onAuthComplete?: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
-export default function GoogleSignInButton({ onSuccess }: { onSuccess?: (token: string) => void }) {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: WEB_CLIENT_ID,
-    androidClientId: WEB_CLIENT_ID, // Puedes poner el clientId de Android si lo tienes, si no, usa el web
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      if (onSuccess && authentication?.accessToken) {
-        onSuccess(authentication.accessToken);
+  const handleGoogleSignIn = async () => {
+    try {
+      console.log('GoogleSignIn: Iniciando proceso de autenticación...');
+      setLoading(true);
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      console.log('GoogleSignIn: Servicios de Google Play verificados');
+      await GoogleSignin.signOut();
+      console.log('GoogleSignIn: Llamando a GoogleSignin.signIn()...');
+      const result = await GoogleSignin.signIn();
+      console.log('GoogleSignIn: Resultado obtenido:', result ? 'Éxito' : 'Falló');
+      const res: any = result;
+      let idToken = undefined;
+      let user = undefined;
+      if (res && res.idToken && res.user) {
+        idToken = res.idToken;
+        user = res.user;
+        console.log('GoogleSignIn: Usando versión clásica');
+      } else if (res && res.data && res.data.idToken && res.data.user) {
+        idToken = res.data.idToken;
+        user = res.data.user;
+        console.log('GoogleSignIn: Usando versión con .data');
+      } else if (res && res.type === 'success' && res.data) {
+        idToken = res.data.idToken;
+        user = res.data.user;
+        console.log('GoogleSignIn: Usando versión con .type');
       } else {
-        Alert.alert('Éxito', 'Autenticación con Google exitosa');
+        console.log('GoogleSignIn: No se pudo obtener datos válidos del resultado');
+        setLoading(false);
+        Alert.alert('Error', 'No se pudo obtener los datos de Google. Actualiza la app o revisa la configuración.');
+        return;
       }
+      console.log('GoogleSignIn: Autenticando con Firebase...');
+      // Usar GoogleAuthProvider directamente
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await (await getAuthInstanceAsync()).signInWithCredential(googleCredential);
+      console.log('GoogleSignIn: Autenticación con Firebase exitosa');
+      console.log('GoogleSignIn: Guardando sesión...');
+      await AuthService.saveUserSession(userCredential.user, userCredential.user.phoneNumber || '');
+      console.log('GoogleSignIn: Consultando rol existente en Supabase...');
+      let userRole = await getUserRoleFromSupabase(userCredential.user.uid);
+      if (!userRole) {
+        console.log('GoogleSignIn: Usuario nuevo, permitiendo selección de tipo...');
+        userRole = 'user';
+        console.log('GoogleSignIn: Asignando tipo por defecto:', userRole);
+      } else {
+        console.log('GoogleSignIn: Rol existente encontrado:', userRole);
+      }
+      
+      // Sincronizar con Supabase en lugar de usar Firebase
+      console.log('GoogleSignIn: Sincronizando con Supabase...');
+      const syncResult = await syncUserWithSupabase(userCredential.user);
+      if (syncResult) {
+        console.log('GoogleSignIn: Usuario sincronizado con Supabase exitosamente');
+      } else {
+        console.warn('GoogleSignIn: Error sincronizando con Supabase');
+      }
+      
+      await AsyncStorage.setItem('userType', userRole);
+      console.log('GoogleSignIn: userType establecido como', `"${userRole}"`);
+      console.log('GoogleSignIn: Sesión y perfil guardados exitosamente');
+      setLoading(false);
+      if (onSuccess) onSuccess(idToken);
+      if (onAuthComplete) onAuthComplete();
+      console.log('GoogleSignIn: Proceso completado exitosamente');
+    } catch (error: any) {
+      console.error('GoogleSignIn: Error durante el proceso:', error);
+      setLoading(false);
+      Alert.alert('Error', error.message || 'Error al iniciar sesión con Google');
     }
-  }, [response]);
+  };
 
   return (
     <TouchableOpacity
-      style={[styles.googleButton, !request && styles.disabled]}
-      onPress={() => promptAsync()}
-      disabled={!request}
+      style={[styles.googleButton, loading && styles.disabled]}
+      onPress={handleGoogleSignIn}
+      disabled={loading}
       activeOpacity={0.7}
     >
       <View style={styles.innerContainer}>
         <Image source={require('../../assets/images/google_sig.png')} style={styles.googleLogo} />
         <Text style={styles.googleButtonText}>Continuar con Google</Text>
+        {loading && <ActivityIndicator style={{ marginLeft: 8 }} />}
       </View>
     </TouchableOpacity>
   );

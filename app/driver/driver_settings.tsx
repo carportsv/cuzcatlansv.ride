@@ -1,3 +1,4 @@
+import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -5,7 +6,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 export default function DriverSettings() {
-  const { user } = useAuth();
+  const { user, setUserType } = useAuth();
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -16,6 +17,29 @@ export default function DriverSettings() {
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Cerrar Sesión', style: 'destructive', onPress: () => router.replace('/login') }
+      ]
+    );
+  };
+
+  const handleBecomeUser = async () => {
+    Alert.alert(
+      'Cambiar a Usuario',
+      '¿Estás seguro de que quieres cambiar a modo usuario? Perderás acceso al panel de conductor.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Cambiar', 
+          style: 'default', 
+          onPress: async () => {
+            try {
+              await setUserType('user');
+              router.replace('/user/user_home');
+            } catch (error) {
+              console.error('Error changing to user:', error);
+              Alert.alert('Error', 'No se pudo cambiar a usuario. Inténtalo de nuevo.');
+            }
+          }
+        }
       ]
     );
   };
@@ -61,10 +85,7 @@ export default function DriverSettings() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Configuración</Text>
-        <Text style={styles.headerSubtitle}>Ajusta tus preferencias</Text>
-      </View>
+      <AppHeader subtitle="Ajusta tus preferencias" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {settingsOptions.map((option, index) => (
@@ -94,6 +115,12 @@ export default function DriverSettings() {
             </TouchableOpacity>
           </View>
         ))}
+
+        {/* Botón para volver a ser usuario */}
+        <TouchableOpacity style={styles.userButton} onPress={handleBecomeUser}>
+          <MaterialIcons name="person" size={24} color="#fff" />
+          <Text style={styles.userButtonText}>Cambiar a modo Usuario</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -103,21 +130,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   content: {
     flex: 1,
@@ -160,5 +172,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 2,
+  },
+  userButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#059669',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 16,
+    marginBottom: 24,
+    elevation: 2,
+  },
+  userButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 12,
   },
 }); 

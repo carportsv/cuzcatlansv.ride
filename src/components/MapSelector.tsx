@@ -1,81 +1,95 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { View } from 'react-native';
-import MapView, { MapPressEvent, Marker, Region } from 'react-native-maps';
+import { LocationCoords } from '@/services/openStreetMapService';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import OpenStreetMap, { MapMarker, MapPolyline } from './OpenStreetMap';
 
-export function MapSelector({
-  region,
-  onPress,
-  userLocation,
-  originCoords,
-  destinationCoords,
-  driverMarkers,
-  style
-}: {
-  region: Region,
-  onPress: (event: MapPressEvent) => void,
-  userLocation?: Region | null,
-  originCoords?: { latitude: number, longitude: number } | null,
-  destinationCoords?: { latitude: number, longitude: number } | null,
-  driverMarkers?: Array<{ id: string; location: { latitude: number; longitude: number }; name?: string; car?: { model?: string } }> | null,
-  style?: any
-}) {
+export interface MapSelectorProps {
+  onLocationSelect?: (coordinate: LocationCoords, address: string) => void;
+  initialRegion?: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  };
+  markers?: MapMarker[];
+  polylines?: MapPolyline[];
+  style?: any;
+}
+
+export function MapSelector({ 
+  onLocationSelect, 
+  initialRegion,
+  markers = [],
+  polylines = [],
+  style 
+}: MapSelectorProps) {
+  const [selectedLocation, setSelectedLocation] = useState<LocationCoords | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<string>('');
+
+  const handleMapPress = async (coordinate: LocationCoords) => {
+    try {
+      // Aquí podrías usar el servicio de geocoding para obtener la dirección
+      // Por ahora usamos las coordenadas directamente
+      setSelectedLocation(coordinate);
+      setSelectedAddress(`${coordinate.latitude.toFixed(6)}, ${coordinate.longitude.toFixed(6)}`);
+      
+      if (onLocationSelect) {
+        onLocationSelect(coordinate, selectedAddress);
+      }
+    } catch (error) {
+      console.error('Error al seleccionar ubicación:', error);
+      Alert.alert('Error', 'No se pudo obtener la dirección de la ubicación seleccionada');
+    }
+  };
+
+  const handleMarkerPress = (marker: MapMarker) => {
+    if (onLocationSelect) {
+      onLocationSelect(marker.coordinate, marker.title || 'Ubicación seleccionada');
+    }
+  };
+
   return (
-    <MapView
-      style={style}
-      region={region}
-      onPress={onPress}
-    >
-      {userLocation && (
-        <Marker
-          coordinate={{
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude,
-          }}
-          title="Tu ubicación"
-          description="Estás aquí"
-        />
+    <View style={[styles.container, style]}>
+      <OpenStreetMap
+        initialRegion={initialRegion}
+        markers={markers}
+        polylines={polylines}
+        onMapPress={handleMapPress}
+        onMarkerPress={handleMarkerPress}
+        style={styles.map}
+      />
+      {selectedLocation && (
+        <View style={styles.locationInfo}>
+          <Text style={styles.locationText}>
+            Ubicación seleccionada: {selectedAddress}
+          </Text>
+        </View>
       )}
-      {originCoords && (
-        <Marker
-          coordinate={originCoords}
-          title="Origen"
-          pinColor="green"
-        />
-      )}
-      {destinationCoords && (
-        <Marker
-          coordinate={destinationCoords}
-          title="Destino"
-          pinColor="red"
-        />
-      )}
-      {driverMarkers && driverMarkers.map(driver => (
-        <Marker
-          key={driver.id}
-          coordinate={driver.location}
-          title={driver.name || 'Conductor disponible'}
-          description={driver.car?.model ? `Auto: ${driver.car.model}` : undefined}
-        >
-          <View style={{
-            backgroundColor: '#fff',
-            borderRadius: 20,
-            borderWidth: 3,
-            borderColor: '#2563EB',
-            padding: 4,
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 40,
-            height: 40,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 2,
-            elevation: 3,
-          }}>
-            <MaterialIcons name="directions-car" size={24} color="#2563EB" />
-          </View>
-        </Marker>
-      ))}
-    </MapView>
+    </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
+  locationInfo: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+}); 

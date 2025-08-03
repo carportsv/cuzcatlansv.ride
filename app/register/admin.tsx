@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { AuthService } from '@/services/authService';
+import { syncUserWithSupabase } from '@/services/authService';
+import { getAuthInstanceAsync } from '@/services/firebaseConfig';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import CountryPicker, { Country, getCallingCode } from 'react-native-country-picker-modal';
+import ModalVerificacion from '../ModalVerificacion';
 
 const dropDown = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAi0lEQVRYR+3WuQ6AIBRE0eHL1T83FBqU5S1szdiY2NyTKcCAzU/Y3AcBXIALcIF0gRPAsehgugDEXnYQrUC88RIgfpuJ+MRrgFmILN4CjEYU4xJgFKIa1wB6Ec24FuBFiHELwIpQxa0ALUId9wAkhCmuBdQQ5ngP4I9wxXsBDyJ9m+8y/g9wAS7ABW4giBshQZji3AAAAABJRU5ErkJggg==";
 
@@ -230,31 +232,23 @@ export default function AdminRegistration() {
     try {
       setLoading(true);
       
-      // Crear perfil de administrador
-      const formatted = phoneInput.current?.getNumberAfterPossiblyEliminatingZero();
-      await AuthService.createOrUpdateUserProfile({
-        uid,
-        name: formData.name,
-        phoneNumber: formatted?.formattedNumber || formData.phoneNumber,
-        role: 'admin',
-        email: formData.email,
-      });
-
-      // Guardar información adicional del administrador en Firestore
-      const { saveUserData } = await import('@/services/userFirestore');
-      await saveUserData(uid, {
-        name: formData.name,
-        phoneNumber: formatted?.formattedNumber || formData.phoneNumber,
-        role: 'admin',
-        email: formData.email,
-        department: formData.department,
-        position: formData.position,
-        adminCode: formData.adminCode.toUpperCase(),
-        permissions: ['all'], // Permisos completos
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+      // Obtener el usuario actual de Firebase
+      const auth = await getAuthInstanceAsync();
+      const firebaseUser = auth.currentUser;
+      
+      if (!firebaseUser) {
+        throw new Error('No hay usuario autenticado');
+      }
+      
+      // Sincronizar con Supabase
+      console.log('AdminRegistration: Sincronizando con Supabase...');
+      const syncResult = await syncUserWithSupabase(firebaseUser);
+      
+      if (!syncResult) {
+        console.warn('AdminRegistration: Error sincronizando con Supabase');
+      } else {
+        console.log('AdminRegistration: Usuario sincronizado con Supabase exitosamente');
+      }
 
       Alert.alert(
         'Registro Exitoso',

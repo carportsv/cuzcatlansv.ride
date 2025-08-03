@@ -1,3 +1,5 @@
+import AppHeader from '@/components/AppHeader';
+import { RouteGuard } from '@/components/RouteGuard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUser } from '@/contexts/UserContext';
 import { RideRequest } from '@/services/rideService';
@@ -15,7 +17,7 @@ export default function DriverHomeScreen() {
 
   useEffect(() => {
     const fetchAssignedRides = async () => {
-      // Dummy data temporal hasta que conectes a Firestore o API real
+      // Obtener viajes asignados reales desde Supabase
       const rides: RideRequest[] = [];
       setAssignedRides(rides);
     };
@@ -33,23 +35,20 @@ export default function DriverHomeScreen() {
 
   // Función para generar un nombre temporal amigable
   const getFriendlyName = () => {
-    // Primera prioridad: usar el nick
+    // Primera prioridad: usar el nick del contexto de usuario
     if (nick?.trim()) {
       return nick;
     }
-    
-    // Segunda prioridad: usar el primer nombre
-    if (user?.name?.trim()) {
-      return user.name.split(' ')[0];
+    // Segunda prioridad: usar el email del usuario
+    if (user?.email?.trim()) {
+      return user.email.split('@')[0];
     }
-    
-    // Tercera prioridad: generar uno basado en el número de teléfono
+    // Tercera prioridad: usar el número de teléfono
     if (user?.phoneNumber) {
       const lastDigits = user.phoneNumber.slice(-4);
       return `Conductor ${lastDigits}`;
     }
-    
-    return 'Amigo';
+    return 'Conductor';
   };
 
   const renderRideRequest = ({ item }: { item: RideRequest }) => (
@@ -106,50 +105,49 @@ export default function DriverHomeScreen() {
   ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Panel de Conductor</Text>
-        <Text style={styles.headerSubtitle}>Hola, {getFriendlyName()}</Text>
-      </View>
-      
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {menuItems.map((item, index) => (
-          <View key={index} style={styles.optionContainer}>
-            <TouchableOpacity
-              style={styles.option}
-              onPress={item.onPress}
-            >
-              <View style={styles.optionLeft}>
-                <MaterialIcons 
-                  name={item.icon as any} 
-                  size={24} 
-                  color={item.isLogout ? '#E53E3E' : '#2563EB'} 
-                />
-                <View style={styles.optionText}>
-                  <Text style={[
-                    styles.optionTitle,
-                    item.isLogout && styles.logoutTitle
-                  ]}>
-                    {item.title}
-                  </Text>
-                  <Text style={[
-                    styles.optionSubtitle,
-                    item.isLogout && styles.logoutSubtitle
-                  ]}>
-                    {item.subtitle}
-                  </Text>
+    <RouteGuard allowedUserTypes={['driver']}>
+      <View style={styles.container}>
+        <AppHeader subtitle={`Hola, ${getFriendlyName()}`} />
+        
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {menuItems.map((item, index) => (
+            <View key={index} style={styles.optionContainer}>
+              <TouchableOpacity
+                style={styles.option}
+                onPress={item.onPress}
+              >
+                <View style={styles.optionLeft}>
+                  <MaterialIcons 
+                    name={item.icon as any} 
+                    size={24} 
+                    color={item.isLogout ? '#E53E3E' : '#2563EB'} 
+                  />
+                  <View style={styles.optionText}>
+                    <Text style={[
+                      styles.optionTitle,
+                      item.isLogout && styles.logoutTitle
+                    ]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[
+                      styles.optionSubtitle,
+                      item.isLogout && styles.logoutSubtitle
+                    ]}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <MaterialIcons 
-                name="chevron-right" 
-                size={24} 
-                color={item.isLogout ? '#E53E3E' : '#9CA3AF'} 
-              />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
+                <MaterialIcons 
+                  name="chevron-right" 
+                  size={24} 
+                  color={item.isLogout ? '#E53E3E' : '#9CA3AF'} 
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    </RouteGuard>
   );
 }
 
@@ -157,21 +155,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   content: {
     flex: 1,

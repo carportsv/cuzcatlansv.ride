@@ -1,3 +1,4 @@
+import AppHeader from '@/components/AppHeader';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -22,10 +23,7 @@ export default function UserSettDireccionesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Direcciones</Text>
-        <Text style={styles.headerSubtitle}>Gestiona tus ubicaciones</Text>
-      </View>
+      <AppHeader subtitle="Gestiona tus ubicaciones" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {addressOptions.map((option, index) => (
@@ -54,21 +52,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   content: {
     flex: 1,

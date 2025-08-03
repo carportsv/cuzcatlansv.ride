@@ -1,54 +1,26 @@
+import OpenStreetMap from '@/components/OpenStreetMap';
+import { useAuth } from '@/contexts/AuthContext';
+import { Driver, DriverService } from '@/services/driverService';
+import openStreetMapService, { LocationCoords } from '@/services/openStreetMapService';
 import { createRideRequest } from '@/services/rideService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import firestore from '@react-native-firebase/firestore';
-import Constants from 'expo-constants';
+import { getUserData } from '@/services/userFirestore';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import MapViewDirections from 'react-native-maps-directions';
-
-// Obtener la API key de las constantes de Expo
-const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey || '';
-
-// Mostrar la API Key para depuración
-console.log('GOOGLE_MAPS_API_KEY:', GOOGLE_MAPS_API_KEY);
-
-// Mostrar la API Key real para depuración
-console.log('GOOGLE_MAPS_API_KEY (real):', GOOGLE_MAPS_API_KEY);
-
-// Función para enviar notificación push a un array de tokens Expo
-async function sendPushNotificationToDrivers(tokens: string[], title: string, body: string) {
-  const messages = tokens.map(token => ({
-    to: token,
-    sound: 'default',
-    title,
-    body,
-    data: { type: 'ride_request' },
-  }));
-  try {
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(messages),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error('Error enviando notificación push:', error);
-    return null;
-  }
-}
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const UserRideSummaryScreen = () => {
   const router = useRouter();
+  const { userId: firebaseUid } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [selectedDriver, setSelectedDriver] = useState<any>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [tripDuration, setTripDuration] = useState<number | null>(null);
+  const [tripDistance, setTripDistance] = useState<number | null>(null);
+  const [eta, setEta] = useState<number | null>(null);
+  
   const params = useLocalSearchParams();
   
   const origin = params.origin as string || '';
@@ -60,19 +32,15 @@ const UserRideSummaryScreen = () => {
 
   const price = Math.floor(Math.random() * 20) + 10; // Precio aleatorio entre 10 y 30
 
-  const originCoords = {
+  const originCoords: LocationCoords = {
     latitude: originLat ? parseFloat(originLat) : 0,
     longitude: originLng ? parseFloat(originLng) : 0,
   };
 
-  const destinationCoords = {
+  const destinationCoords: LocationCoords = {
     latitude: destLat ? parseFloat(destLat) : 0,
     longitude: destLng ? parseFloat(destLng) : 0,
   };
-
-  const [tripDuration, setTripDuration] = useState<number | null>(null);
-  const [eta, setEta] = useState<number | null>(null);
-  const mapDirectionsRef = useRef<any>(null);
 
   // Validar que tenemos todos los datos necesarios
   useEffect(() => {
@@ -82,202 +50,520 @@ const UserRideSummaryScreen = () => {
     }
   }, []);
 
-  // Consultar conductores disponibles
+  // Calcular distancia y duración usando OpenStreetMap
   useEffect(() => {
-    setLoadingDrivers(true);
-    const unsubscribe = firestore()
-      .collection('drivers')
-      .where('isAvailable', '==', true)
-      .onSnapshot(snapshot => {
-        const availableDrivers = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data
-          };
+    const calculateRoute = async () => {
+      try {
+        console.log('[UserRideSummary] Calculando ruta con coordenadas:', {
+          origin: originCoords,
+          destination: destinationCoords
         });
-        setDrivers(availableDrivers);
-        setLoadingDrivers(false);
-        // Seleccionar el primero por defecto si hay disponibles
-        if (availableDrivers.length > 0 && !selectedDriver) {
-          setSelectedDriver(availableDrivers[0]);
+        
+        const route = await openStreetMapService.getRoute(originCoords, destinationCoords);
+        if (route) {
+          console.log('[UserRideSummary] Ruta calculada exitosamente:', {
+            distance: route.totalDistance,
+            duration: route.totalDuration,
+            distanceFormatted: openStreetMapService.formatDistance(route.totalDistance),
+            durationFormatted: openStreetMapService.formatDuration(route.totalDuration)
+          });
+          
+          setTripDistance(route.totalDistance);
+          setTripDuration(route.totalDuration);
+          // ETA basado en la duración real de la ruta (tiempo estimado de llegada del conductor)
+          const etaMinutes = Math.round(route.totalDuration / 60);
+          setEta(etaMinutes);
+        } else {
+          console.warn('[UserRideSummary] No se pudo calcular la ruta, usando fallback');
+          // Valores por defecto si falla el cálculo
+          const fallbackDistance = openStreetMapService.calculateDistance(originCoords, destinationCoords);
+          setTripDistance(fallbackDistance);
+          setTripDuration(1800); // 30 minutos por defecto
+          setEta(30); // ETA por defecto basado en la duración por defecto
         }
-      }, (err) => {
+      } catch (error) {
+        console.error('[UserRideSummary] Error calculando ruta:', error);
+        // Valores por defecto si falla el cálculo
+        const fallbackDistance = openStreetMapService.calculateDistance(originCoords, destinationCoords);
+        setTripDistance(fallbackDistance);
+        setTripDuration(1800); // 30 minutos por defecto
+        setEta(30); // ETA por defecto basado en la duración por defecto
+      }
+    };
+
+    if (originCoords.latitude !== 0 && destinationCoords.latitude !== 0) {
+      calculateRoute();
+    }
+  }, [originCoords, destinationCoords]);
+
+  // Consultar conductores disponibles desde Supabase
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      setLoadingDrivers(true);
+      try {
+        console.log('Buscando conductores disponibles...');
+        const availableDrivers = await DriverService.getAvailableDrivers(
+          originCoords.latitude,
+          originCoords.longitude
+        );
+        
+        if (availableDrivers.length > 0) {
+          setDrivers(availableDrivers);
+          setSelectedDriver(availableDrivers[0]);
+        } else {
+          console.log('No se encontraron conductores disponibles');
+          // Si no hay conductores reales, mostrar un mensaje
+          Alert.alert(
+            'Sin conductores disponibles',
+            'No hay conductores disponibles en tu área en este momento. Intenta más tarde.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        }
+      } catch (error) {
+        console.error('Error obteniendo conductores:', error);
+        Alert.alert(
+          'Error',
+          'No se pudieron obtener los conductores disponibles. Intenta de nuevo.',
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      } finally {
         setLoadingDrivers(false);
-        Alert.alert('Error', 'No se pudo obtener la lista de conductores');
-      });
-    return () => unsubscribe();
-  }, []);
+      }
+    };
+
+    if (originCoords.latitude !== 0 && originCoords.longitude !== 0) {
+      fetchDrivers();
+    }
+  }, [originCoords.latitude, originCoords.longitude]);
+
+  // Crear marcadores para el mapa
+  const mapMarkers = [];
+  
+  // Marcador de origen
+  if (originCoords.latitude !== 0) {
+    mapMarkers.push({
+      id: 'origin',
+      latitude: originCoords.latitude,
+      longitude: originCoords.longitude,
+      title: 'Origen',
+      color: '#2563EB'
+    });
+  }
+  
+  // Marcador de destino
+  if (destinationCoords.latitude !== 0) {
+    mapMarkers.push({
+      id: 'destination',
+      latitude: destinationCoords.latitude,
+      longitude: destinationCoords.longitude,
+      title: 'Destino',
+      color: '#F59E42'
+    });
+  }
+  
+  // Marcador del conductor seleccionado
+  if (selectedDriver && selectedDriver.location) {
+    mapMarkers.push({
+      id: 'driver',
+      latitude: selectedDriver.location.latitude,
+      longitude: selectedDriver.location.longitude,
+      title: selectedDriver.user?.display_name || 'Conductor',
+      color: '#10B981'
+    });
+  }
+
+  const handleCallDriver = () => {
+    if (!selectedDriver) return;
+    
+    Alert.alert(
+      'Llamar al conductor',
+      `¿Deseas llamar a ${selectedDriver.user?.display_name || 'el conductor'}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Llamar', onPress: () => {
+          // Aquí iría la lógica para hacer la llamada
+          Alert.alert('Llamando...', `Conectando con ${selectedDriver.user?.phone_number || 'el conductor'}`);
+        }}
+      ]
+    );
+  };
+
+  const handleMessageDriver = () => {
+    if (!selectedDriver) return;
+    
+    Alert.alert(
+      'Mensaje al conductor',
+      'Funcionalidad de mensajería próximamente disponible',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleCancelRide = () => {
+    Alert.alert(
+      'Cancelar viaje',
+      '¿Estás seguro de que deseas cancelar este viaje?',
+      [
+        { text: 'No', style: 'cancel' },
+        { text: 'Sí, cancelar', style: 'destructive', onPress: () => {
+          router.back();
+        }}
+      ]
+    );
+  };
 
   const handleConfirmRide = async () => {
+    if (!selectedDriver) {
+      Alert.alert('Error', 'Debes seleccionar un conductor');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const userId = await AsyncStorage.getItem('userUID');
-      if (!userId) {
-        Alert.alert('Error', 'No se pudo obtener la información del usuario');
+      if (!firebaseUid) {
+        Alert.alert('Error', 'No se pudo obtener el ID del usuario.');
+        setIsLoading(false);
         return;
       }
-      // Obtener tokens push de conductores disponibles
-      const driversSnapshot = await firestore()
-        .collection('drivers')
-        .where('isAvailable', '==', true)
-        .get();
-      const tokens: string[] = [];
-      driversSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.pushToken) tokens.push(data.pushToken);
-      });
-      // Enviar notificación push a todos los conductores disponibles
-      if (tokens.length > 0) {
-        await sendPushNotificationToDrivers(tokens, 'Nueva solicitud de viaje', '¡Un usuario ha solicitado un taxi!');
+      
+      const user = await getUserData(firebaseUid);
+      if (!user) {
+        Alert.alert('Error', 'No se pudo obtener el usuario actual.');
+        setIsLoading(false);
+        return;
       }
+
       const rideRequest = await createRideRequest({
-        userId,
+        userId: user.id,
+        driverId: undefined, // No asignar driver inicialmente, el driver debe aceptar
         origin: {
           address: origin,
-          coordinates: originCoords,
+          coordinates: {
+            latitude: parseFloat(originLat),
+            longitude: parseFloat(originLng)
+          }
         },
         destination: {
           address: destination,
-          coordinates: destinationCoords,
+          coordinates: {
+            latitude: parseFloat(destLat),
+            longitude: parseFloat(destLng)
+          }
         },
+        status: 'requested',
+        price: price,
+        distance: tripDistance ? Math.round(tripDistance) : undefined,
+        duration: tripDuration ? Math.round(tripDuration) : undefined,
       });
-      Alert.alert('¡Taxi solicitado!', 'Tu taxi está en camino.');
-      router.replace('/user/user_home');
+
+      if (rideRequest) {
+        Alert.alert(
+          '¡Solicitud enviada!',
+          'Tu solicitud de viaje ha sido enviada. Los conductores disponibles la verán y podrán aceptarla.',
+          [
+            { text: 'OK', onPress: () => {
+              router.push('/user/user_home');
+            }}
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'No se pudo crear la solicitud de viaje.');
+      }
     } catch (error) {
-      console.error('Error al crear la solicitud:', error);
-      Alert.alert('Error', 'No se pudo crear la solicitud de viaje');
+      console.error('Error confirmando viaje:', error);
+      Alert.alert('Error', 'No se pudo confirmar el viaje. Intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (loadingDrivers) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Buscando conductores disponibles...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Resumen del Viaje</Text>
-      <Text>Origen: {origin}</Text>
-      <Text>Destino: {destination}</Text>
-      <Text>Precio estimado: ${price}</Text>
-      <Text style={{ fontSize: 10, color: GOOGLE_MAPS_API_KEY ? '#888' : 'red', marginBottom: 4 }}>
-        API Key: {GOOGLE_MAPS_API_KEY || 'NO DEFINIDA'}
-      </Text>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: originCoords.latitude,
-          longitude: originCoords.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-      >
-        <Marker coordinate={originCoords} title="Origen" pinColor="green" />
-        <Marker coordinate={destinationCoords} title="Destino" pinColor="red" />
-        <MapViewDirections
-          ref={mapDirectionsRef}
-          origin={originCoords}
-          destination={destinationCoords}
-          apikey={GOOGLE_MAPS_API_KEY}
-          strokeWidth={4}
-          strokeColor="blue"
-          onReady={result => {
-            console.log('MapViewDirections result:', result);
-            if (result && typeof result.duration === 'number') {
-              setTripDuration(result.duration);
-              console.log('Duración del viaje (min):', result.duration);
-            } else {
-              setTripDuration(null);
-              console.warn('No se recibió duración en MapViewDirections');
-            }
-          }}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#2563EB" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Resumen del Viaje</Text>
+      </View>
+
+      <View style={styles.mapContainer}>
+        <OpenStreetMap
+          latitude={(originCoords.latitude + destinationCoords.latitude) / 2}
+          longitude={(originCoords.longitude + destinationCoords.longitude) / 2}
+          zoom={12}
+          markers={mapMarkers}
+          style={styles.map}
         />
-        {/* ETA del taxi si hay conductor disponible y ubicación */}
-        {selectedDriver && selectedDriver.location && (
-          <MapViewDirections
-            origin={selectedDriver.location}
-            destination={originCoords}
-            apikey={GOOGLE_MAPS_API_KEY}
-            strokeWidth={2}
-            strokeColor="#10B981"
-            onReady={result => {
-              setEta(result.duration);
-              console.log('ETA del taxi (min):', result.duration);
-            }}
-          />
-        )}
-      </MapView>
-      {drivers.length === 0 && (
-        <Text style={{ color: 'red', marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
-          No hay conductores disponibles en este momento.
-        </Text>
-      )}
-      <TouchableOpacity
-        style={[styles.button, (isLoading || drivers.length === 0) && styles.buttonDisabled]}
-        onPress={handleConfirmRide}
-        disabled={isLoading || drivers.length === 0}
-      >
-        <Text style={styles.buttonText}>
-          {isLoading ? 'Solicitando...' : 'Confirmar y Tomar Taxi'}
-        </Text>
-      </TouchableOpacity>
-      {tripDuration === null && (
-        <Text style={{ marginTop: 10, textAlign: 'center', color: 'red', fontWeight: 'bold' }}>
-          No se pudo calcular el tiempo estimado de viaje.
-        </Text>
-      )}
-      {eta !== null && (
-        <Text style={{ marginTop: 4, textAlign: 'center', color: '#10B981', fontWeight: 'bold' }}>
-          El taxi está a {Math.round(eta)} min de tu ubicación
-        </Text>
-      )}
-    </View>
+      </View>
+
+      <View style={styles.content}>
+        {/* Información del conductor */}
+        <View style={styles.driverSection}>
+          <Text style={styles.sectionTitle}>Conductor</Text>
+          <View style={styles.driverInfo}>
+            <View style={styles.driverDetails}>
+              <Text style={styles.driverName}>{selectedDriver?.user?.display_name}</Text>
+              <View style={styles.ratingContainer}>
+                <Ionicons name="star" size={16} color="#F59E0A" />
+                <Text style={styles.rating}>{selectedDriver?.rating}</Text>
+              </View>
+              <Text style={styles.vehicleInfo}>
+                {selectedDriver?.car_info ? 
+                  `${selectedDriver.car_info.model} ${selectedDriver.car_info.year}` : 
+                  'Vehículo no especificado'
+                }
+              </Text>
+              <Text style={styles.plateNumber}>
+                {selectedDriver?.car_info?.plate || 'Sin placa'}
+              </Text>
+            </View>
+            <View style={styles.driverActions}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleCallDriver}>
+                <Ionicons name="call" size={20} color="#2563EB" />
+                <Text style={styles.actionButtonText}>Llamar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={handleMessageDriver}>
+                <Ionicons name="chatbubble" size={20} color="#2563EB" />
+                <Text style={styles.actionButtonText}>Mensaje</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Detalles del viaje */}
+        <View style={styles.tripSection}>
+          <Text style={styles.sectionTitle}>Detalles del Viaje</Text>
+          <View style={styles.tripDetails}>
+            <View style={styles.tripPoint}>
+              <Text style={styles.tripLabel}>Origen:</Text>
+              <Text style={styles.tripAddress}>{origin}</Text>
+            </View>
+            <View style={styles.tripPoint}>
+              <Text style={styles.tripLabel}>Destino:</Text>
+              <Text style={styles.tripAddress}>{destination}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Métricas del viaje */}
+        <View style={styles.metricsSection}>
+          <View style={styles.metric}>
+            <Text style={styles.metricLabel}>Distancia</Text>
+            <Text style={styles.metricValue}>
+              {tripDistance ? openStreetMapService.formatDistance(tripDistance) : 'Calculando...'}
+            </Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.metricLabel}>Duración</Text>
+            <Text style={styles.metricValue}>
+              {tripDuration ? openStreetMapService.formatDuration(tripDuration) : 'Calculando...'}
+            </Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.metricLabel}>ETA</Text>
+            <Text style={styles.metricValue}>{eta ? `${eta} min` : 'Calculando...'}</Text>
+          </View>
+        </View>
+
+        {/* Botones de acción */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancelRide}>
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.confirmButton, isLoading && styles.disabledButton]} 
+            onPress={handleConfirmRide}
+            disabled={isLoading}
+          >
+            <Text style={styles.confirmButtonText}>
+              {isLoading ? 'Confirmando...' : 'Confirmar Viaje'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
-
-export default UserRideSummaryScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 24,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#1F2937',
+  },
+  mapContainer: {
+    height: 200,
   },
   map: {
-    height: 300,
-    marginVertical: 20,
-    borderRadius: 10,
+    flex: 1,
   },
-  button: {
-    backgroundColor: '#2563EB',
-    padding: 15,
-    borderRadius: 10,
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
   },
-  buttonDisabled: {
-    backgroundColor: '#93C5FD',
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
   },
-  buttonText: {
+  driverSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  driverInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  driverDetails: {
+    flex: 1,
+  },
+  driverName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  rating: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  vehicleInfo: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  plateNumber: {
+    fontSize: 14,
+    color: '#2563EB',
+    fontWeight: 'bold',
+  },
+  driverActions: {
+    flexDirection: 'row',
+  },
+  actionButton: {
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: '#2563EB',
+    marginTop: 4,
+  },
+  tripSection: {
+    marginBottom: 20,
+  },
+  tripDetails: {
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 8,
+  },
+  tripPoint: {
+    marginBottom: 8,
+  },
+  tripLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  tripAddress: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  metricsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+    paddingVertical: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+  },
+  metric: {
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  metricValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  driverCard: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    padding: 16,
-    marginRight: 10,
+  confirmButton: {
+    flex: 2,
+    backgroundColor: '#2563EB',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 100,
   },
-  driverCardSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#DBEAFE',
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-}); 
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+  },
+});
+
+export default UserRideSummaryScreen; 

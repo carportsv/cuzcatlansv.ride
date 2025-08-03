@@ -1,18 +1,15 @@
+import AppHeader from '@/components/AppHeader';
+import PlaceInput from '@/components/PlaceInput';
 import { useUser } from '@/contexts/UserContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GooglePlacesAutocompleteRef } from 'react-native-google-places-autocomplete';
-
-// Usa la variable de entorno para la API Key
-const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export default function UserSettAddHomeScreen() {
   const router = useRouter();
   const { home, setUserData } = useUser();
   const [address, setAddress] = useState(home || '');
-  const ref = useRef<GooglePlacesAutocompleteRef>(null);
 
   const handleSave = () => {
     setUserData({ home: address });
@@ -21,46 +18,24 @@ export default function UserSettAddHomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dirección de Casa</Text>
-        <Text style={styles.headerSubtitle}>Configura tu ubicación de casa</Text>
-      </View>
-      
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.iconSection}>
-          <View style={styles.iconBox}>
-            <MaterialIcons name="home" size={32} color="#2563EB" />
-          </View>
-          <Text style={styles.sectionTitle}>Ubicación de Casa</Text>
-        </View>
+      <AppHeader subtitle="Agregar dirección de casa" />
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>Dirección de Casa</Text>
+        <Text style={styles.subtitle}>
+          Agrega tu dirección de casa para accesos rápidos
+        </Text>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoLabel}>Dirección actual:</Text>
-          <Text style={styles.currentAddress}>
-            {home ? home : 'No hay dirección guardada'}
-          </Text>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Nueva dirección</Text>
-          {/* <PlaceInput
-            ref={ref}
-            placeholder="Buscar dirección de casa"
-            onPress={(data: GooglePlaceData, details: GooglePlaceDetail | null) => {
-              setAddress(data.description);
-              setTimeout(() => {
-                ref.current?.setAddressText(data.description);
-              }, 100);
-            }}
-            textInputProps={{
-              value: address,
-              onChangeText: setAddress,
-            }}
-          /> */}
-          <Text style={styles.placeholderText}>Función de búsqueda en desarrollo</Text>
-        </View>
+        <PlaceInput
+          placeholder="Ingresa tu dirección de casa"
+          onPress={({ description }) => {
+            setAddress(description);
+          }}
+          value={address}
+          onChangeText={setAddress}
+        />
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <MaterialIcons name="save" size={24} color="#fff" />
           <Text style={styles.saveButtonText}>Guardar Dirección</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -71,113 +46,36 @@ export default function UserSettAddHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
+    backgroundColor: '#f5f5f5',
   },
   content: {
     flex: 1,
-    padding: 16,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  iconSection: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  iconBox: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 24,
-    padding: 12,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  infoContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  currentAddress: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 22,
-  },
-  inputContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
-    textAlign: 'center',
     padding: 20,
   },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginBottom: 24,
+  },
   saveButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#2563eb',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginTop: 20,
   },
   saveButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
     fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

@@ -1,25 +1,112 @@
+import AppHeader from '@/components/AppHeader';
+import { supabase } from '@/services/supabaseClient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function DriverVerificationScreen() {
   const router = useRouter();
   const { driverId } = useLocalSearchParams();
+  const [driverData, setDriverData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
-  // En una implementación real, obtendrías los datos del conductor desde Firebase
-  // Por ahora usamos datos de ejemplo
-  const driverData = {
-    name: 'Carlos Alfredo Portillo Ayala',
-    license: 'ABC-123456',
-    carModel: 'Toyota Corolla',
-    carColor: 'Blanco',
-    carPlate: 'ABC-123',
-    driverPhoto: 'https://example.com/driver-photo.jpg',
-    vehiclePhoto: 'https://example.com/vehicle-photo.jpg',
-    platePhoto: 'https://example.com/plate-photo.jpg',
-    rating: 4.8,
-    trips: 127,
-  };
+  useEffect(() => {
+    const loadDriverData = async () => {
+      if (!driverId) {
+        console.log('[DriverVerification] No hay driverId');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('[DriverVerification] Cargando datos del conductor:', driverId);
+        
+        const { data: driver, error } = await supabase
+          .from('drivers')
+          .select(`
+            *,
+            users:user_id (
+              display_name,
+              photo_url
+            )
+          `)
+          .eq('id', driverId)
+          .single();
+
+        if (error) {
+          console.error('[DriverVerification] Error al obtener datos del conductor:', error);
+          setDriverData({
+            name: 'Conductor no encontrado',
+            license: 'No disponible',
+            carMake: 'No disponible',
+            carModel: 'No disponible',
+            carColor: 'No disponible',
+            carPlate: 'No disponible',
+            driverPhoto: null,
+            vehiclePhoto: null,
+            platePhoto: null,
+            rating: 0,
+            trips: 0,
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (driver) {
+          console.log('[DriverVerification] Datos del conductor obtenidos:', driver);
+          
+          setDriverData({
+            name: driver.users?.display_name || 'Conductor',
+            license: driver.documents?.license || 'No disponible',
+            carMake: driver.car_info?.make || 'No disponible',
+            carModel: driver.car_info?.model || 'No disponible',
+            carColor: driver.car_info?.color || 'No disponible',
+            carPlate: driver.car_info?.plate || 'No disponible',
+            driverPhoto: driver.users?.photo_url || null,
+            vehiclePhoto: driver.documents?.vehicle_photo || null,
+            platePhoto: driver.documents?.plate_photo || null,
+            rating: driver.rating || 0,
+            trips: driver.total_rides || 0,
+          });
+        } else {
+          console.log('[DriverVerification] No se encontró el conductor');
+          setDriverData({
+            name: 'Conductor no encontrado',
+            license: 'No disponible',
+            carMake: 'No disponible',
+            carModel: 'No disponible',
+            carColor: 'No disponible',
+            carPlate: 'No disponible',
+            driverPhoto: null,
+            vehiclePhoto: null,
+            platePhoto: null,
+            rating: 0,
+            trips: 0,
+          });
+        }
+      } catch (error) {
+        console.error('[DriverVerification] Error al cargar datos del conductor:', error);
+        setDriverData({
+          name: 'Error al cargar datos',
+          license: 'No disponible',
+          carMake: 'No disponible',
+          carModel: 'No disponible',
+          carColor: 'No disponible',
+          carPlate: 'No disponible',
+          driverPhoto: null,
+          vehiclePhoto: null,
+          platePhoto: null,
+          rating: 0,
+          trips: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDriverData();
+  }, [driverId]);
 
   const handleConfirmRide = () => {
     // Aquí iría la lógica para confirmar el viaje
@@ -30,14 +117,31 @@ export default function DriverVerificationScreen() {
     router.back();
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <AppHeader subtitle="Verificación del conductor" />
+        <View style={styles.center}>
+          <Text>Cargando datos del conductor...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!driverData) {
+    return (
+      <View style={styles.container}>
+        <AppHeader subtitle="Verificación del conductor" />
+        <View style={styles.center}>
+          <Text>No se pudieron cargar los datos del conductor</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Verificación del Conductor</Text>
-      </View>
+      <AppHeader subtitle="Verificación del conductor" />
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <View style={styles.driverInfoCard}>
@@ -114,6 +218,10 @@ export default function DriverVerificationScreen() {
         <View style={styles.vehicleInfoCard}>
           <Text style={styles.vehicleInfoTitle}>Información del Vehículo</Text>
           <View style={styles.vehicleInfoRow}>
+            <Text style={styles.vehicleInfoLabel}>Marca:</Text>
+            <Text style={styles.vehicleInfoValue}>{driverData.carMake}</Text>
+          </View>
+          <View style={styles.vehicleInfoRow}>
             <Text style={styles.vehicleInfoLabel}>Modelo:</Text>
             <Text style={styles.vehicleInfoValue}>{driverData.carModel}</Text>
           </View>
@@ -151,21 +259,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   content: {
     flex: 1,
@@ -355,5 +448,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     marginLeft: 8,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

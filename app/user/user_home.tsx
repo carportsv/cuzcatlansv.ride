@@ -1,18 +1,30 @@
+import AppHeader from '@/components/AppHeader';
+import { RouteGuard } from '@/components/RouteGuard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUser } from '@/contexts/UserContext';
+import { getActiveRide } from '@/services/rideService';
+import { getUserData } from '@/services/userFirestore';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import firestore from '@react-native-firebase/firestore';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function UserHome() {
+  console.log('[UserHome] Componente UserHome iniciando...');
+  
   const router = useRouter();
   const { logout, user } = useAuth();
   const { nick } = useUser();
   const [hasActiveRide, setHasActiveRide] = useState(false);
   const [activeRideId, setActiveRideId] = useState<string | null>(null);
+
+  console.log('[UserHome] Render - Estado inicial:', { 
+    user: !!user, 
+    nick: nick,
+    hasActiveRide,
+    activeRideId 
+  });
 
   // Función para generar un nombre temporal amigable
   const getFriendlyName = () => {
@@ -21,9 +33,10 @@ export default function UserHome() {
       return nick;
     }
     
-    // Segunda prioridad: usar el primer nombre
-    if (user?.name?.trim()) {
-      return user.name.split(' ')[0];
+    // Segunda prioridad: usar el email (sin el dominio)
+    if (user?.email?.trim()) {
+      const emailName = user.email.split('@')[0];
+      return emailName.charAt(0).toUpperCase() + emailName.slice(1);
     }
     
     // Tercera prioridad: generar uno basado en el número de teléfono
@@ -35,32 +48,46 @@ export default function UserHome() {
     return 'Amigo';
   };
 
-  // Verificar si hay un viaje activo
+  // Verificar si hay un viaje activo SOLO UNA VEZ al montar
   useEffect(() => {
+    let isMounted = true;
+    console.log('[UserHome] useEffect MONTADO (solo una vez)');
+    
     const checkActiveRide = async () => {
       try {
-        const userId = await AsyncStorage.getItem('userUID');
-        if (!userId) return;
-
-        const q = firestore().collection('rideRequests').where('userId', '==', userId).where('status', 'in', ['accepted', 'in_progress']);
-
-        const unsubscribe = q.onSnapshot((querySnapshot) => {
-          const hasActive = !querySnapshot.empty;
-          setHasActiveRide(hasActive);
-          if (hasActive) {
-            setActiveRideId(querySnapshot.docs[0].id);
-          } else {
-            setActiveRideId(null);
-          }
-        });
-
-        return unsubscribe;
+        const firebaseUid = await AsyncStorage.getItem('userUID');
+        if (!firebaseUid) {
+          console.log('[UserHome] No hay userUID');
+          return;
+        }
+        
+        // Obtener el user_id de Supabase usando el firebase_uid
+        const userData = await getUserData(firebaseUid);
+        if (!userData || !userData.id) {
+          console.log('[UserHome] No se pudo obtener user_id de Supabase');
+          return;
+        }
+        
+        // Consulta a Supabase para ver si hay viaje activo usando el user_id correcto
+        const activeRide = await getActiveRide(userData.id, 'user');
+        if (!isMounted) return;
+        
+        if (activeRide) {
+          setHasActiveRide(true);
+          setActiveRideId(activeRide.id);
+        } else {
+          setHasActiveRide(false);
+          setActiveRideId(null);
+        }
       } catch (error) {
-        console.error('Error checking active ride:', error);
+        console.error('[UserHome] Error checking active ride (Supabase):', error);
       }
     };
-
     checkActiveRide();
+    return () => {
+      console.log('[UserHome] useEffect CLEANUP');
+      isMounted = false;
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -100,6 +127,12 @@ export default function UserHome() {
       onPress: () => router.push('/user/user_history'),
     },
     {
+      title: 'Registrarse como Conductor',
+      subtitle: 'Convierte tu vehículo en una fuente de ingresos',
+      icon: 'directions-car' as const,
+      onPress: () => router.push('/driver/driver_registration'),
+    },
+    {
       title: 'Configuración',
       subtitle: 'Ajustar preferencias de la app',
       icon: 'settings' as const,
@@ -115,50 +148,48 @@ export default function UserHome() {
   ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>cuzcatlansv.ride</Text>
-        <Text style={styles.headerSubtitle}>Hola, {getFriendlyName()}</Text>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {menuItems.map((item, index) => (
-          <View key={index} style={styles.optionContainer}>
-            <TouchableOpacity
-              style={styles.option}
-              onPress={item.onPress}
-            >
-              <View style={styles.optionLeft}>
-                <MaterialIcons 
-                  name={item.icon} 
-                  size={24} 
-                  color={item.isLogout ? '#E53E3E' : '#2563EB'} 
-                />
-                <View style={styles.optionText}>
-                  <Text style={[
-                    styles.optionTitle,
-                    item.isLogout && styles.logoutTitle
-                  ]}>
-                    {item.title}
-                  </Text>
-                  <Text style={[
-                    styles.optionSubtitle,
-                    item.isLogout && styles.logoutSubtitle
-                  ]}>
-                    {item.subtitle}
-                  </Text>
+    <RouteGuard allowedUserTypes={['user']}>
+      <View style={styles.container}>
+        <AppHeader subtitle={`Hola, ${getFriendlyName()}`} />
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {menuItems.map((item, index) => (
+            <View key={index} style={styles.optionContainer}>
+              <TouchableOpacity
+                style={styles.option}
+                onPress={item.onPress}
+              >
+                <View style={styles.optionLeft}>
+                  <MaterialIcons 
+                    name={item.icon} 
+                    size={24} 
+                    color={item.isLogout ? '#E53E3E' : '#2563EB'} 
+                  />
+                  <View style={styles.optionText}>
+                    <Text style={[
+                      styles.optionTitle,
+                      item.isLogout && styles.logoutTitle
+                    ]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[
+                      styles.optionSubtitle,
+                      item.isLogout && styles.logoutSubtitle
+                    ]}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <MaterialIcons 
-                name="chevron-right" 
-                size={24} 
-                color={item.isLogout ? '#E53E3E' : '#9CA3AF'} 
-              />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
+                <MaterialIcons 
+                  name="chevron-right" 
+                  size={24} 
+                  color={item.isLogout ? '#E53E3E' : '#9CA3AF'} 
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    </RouteGuard>
   );
 }
 

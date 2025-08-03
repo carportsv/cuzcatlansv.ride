@@ -1,3 +1,4 @@
+import AppHeader from '@/components/AppHeader';
 import PlaceInput from '@/components/PlaceInput';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -61,53 +62,56 @@ export default function TestInputsScreen() {
   };
 
   return (
-    <ScrollView style={containerStyle.container}>
-      <Text style={containerStyle.title}>Prueba de PlaceInput - API Directa</Text>
-      
-      <View style={containerStyle.section}>
-        <Text style={containerStyle.sectionTitle}>Origen:</Text>
-        <PlaceInput
-          placeholder="Punto de inicio"
-          onPress={(data, details = null) => {
-            console.log('Origen seleccionado:', data.description);
-            setOrigin(data.description);
-          }}
-          styles={styles}
-          textInputProps={{
-            onFocus: () => console.log('Focus en origen'),
-          }}
-        />
-        {origin ? (
-          <Text style={containerStyle.selectedText}>Seleccionado: {origin}</Text>
-        ) : null}
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+      <AppHeader subtitle="Prueba de PlaceInput" />
+      <ScrollView style={containerStyle.container}>
+        <Text style={containerStyle.title}>Prueba de PlaceInput - API Directa</Text>
+        
+        <View style={containerStyle.section}>
+          <Text style={containerStyle.sectionTitle}>Origen:</Text>
+          <PlaceInput
+            placeholder="Punto de inicio"
+            onPress={(data, details = null) => {
+              console.log('Origen seleccionado:', data.description);
+              setOrigin(data.description);
+            }}
+            styles={styles}
+            textInputProps={{
+              onFocus: () => console.log('Focus en origen'),
+            }}
+          />
+          {origin ? (
+            <Text style={containerStyle.selectedText}>Seleccionado: {origin}</Text>
+          ) : null}
+        </View>
 
-      <View style={containerStyle.section}>
-        <Text style={containerStyle.sectionTitle}>Destino:</Text>
-        <PlaceInput
-          placeholder="Punto de destino"
-          onPress={(data, details = null) => {
-            console.log('Destino seleccionado:', data.description);
-            setDestination(data.description);
-          }}
-          styles={styles}
-          textInputProps={{
-            onFocus: () => console.log('Focus en destino'),
-          }}
-        />
-        {destination ? (
-          <Text style={containerStyle.selectedText}>Seleccionado: {destination}</Text>
-        ) : null}
-      </View>
+        <View style={containerStyle.section}>
+          <Text style={containerStyle.sectionTitle}>Destino:</Text>
+          <PlaceInput
+            placeholder="Punto de destino"
+            onPress={(data, details = null) => {
+              console.log('Destino seleccionado:', data.description);
+              setDestination(data.description);
+            }}
+            styles={styles}
+            textInputProps={{
+              onFocus: () => console.log('Focus en destino'),
+            }}
+          />
+          {destination ? (
+            <Text style={containerStyle.selectedText}>Seleccionado: {destination}</Text>
+          ) : null}
+        </View>
 
-      <View style={containerStyle.infoSection}>
-        <Text style={containerStyle.infoTitle}>Información:</Text>
-        <Text style={containerStyle.infoText}>• Usando implementación directa de Google Places API</Text>
-        <Text style={containerStyle.infoText}>• Búsqueda automática al escribir 3+ caracteres</Text>
-        <Text style={containerStyle.infoText}>• Revisa la consola para ver los logs de búsqueda</Text>
-        <Text style={containerStyle.infoText}>• Sin dependencia de librerías externas problemáticas</Text>
-      </View>
-    </ScrollView>
+        <View style={containerStyle.infoSection}>
+          <Text style={containerStyle.infoTitle}>Información:</Text>
+          <Text style={containerStyle.infoText}>• Usando implementación directa de Google Places API</Text>
+          <Text style={containerStyle.infoText}>• Búsqueda automática al escribir 3+ caracteres</Text>
+          <Text style={containerStyle.infoText}>• Revisa la consola para ver los logs de búsqueda</Text>
+          <Text style={containerStyle.infoText}>• Sin dependencia de librerías externas problemáticas</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 

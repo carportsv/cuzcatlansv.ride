@@ -1,12 +1,10 @@
+import AppHeader from '@/components/AppHeader';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function UserAboutScreen() {
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Acerca de</Text>
-        <Text style={styles.headerSubtitle}>Información de la aplicación</Text>
-      </View>
+      <AppHeader subtitle="Información de la aplicación" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.infoContainer}>
@@ -46,21 +44,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   content: {
     flex: 1,

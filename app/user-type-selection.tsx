@@ -1,191 +1,150 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useColorScheme
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function UserTypeSelection() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { setUserType } = useAuth();
 
-  const handleRegister = (userType: 'user' | 'driver' | 'admin') => {
-    router.push(`/register/${userType}`);
+  const handleUserTypeSelection = async (type: 'user' | 'driver' | 'admin') => {
+    try {
+      await setUserType(type);
+      
+      // Redirigir según el tipo seleccionado
+      switch (type) {
+        case 'user':
+          router.replace('/user/user_home');
+          break;
+        case 'driver':
+          router.replace('/driver/driver_home');
+          break;
+        case 'admin':
+          router.replace('/admin/admin_home');
+          break;
+      }
+    } catch (error) {
+      console.error('Error setting user type:', error);
+    }
   };
 
-  const handleLogin = () => {
-    router.push('/login');
-  };
-
-  const UserTypeCard = ({ 
-    title, 
-    description, 
-    icon, 
-    userType
-  }: {
-    title: string;
-    description: string;
-    icon: string;
-    userType: 'user' | 'driver';
-  }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => handleRegister(userType)}
-    >
-      <View style={styles.cardContent}>
-        <Text style={styles.cardIcon}>{icon}</Text>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const userTypes = [
+    {
+      type: 'user' as const,
+      title: 'Usuario',
+      subtitle: 'Solicitar viajes en taxi',
+      icon: 'person',
+      color: '#2563EB',
+      description: 'Perfecto para solicitar viajes y gestionar tu cuenta de usuario.'
+    },
+    {
+      type: 'driver' as const,
+      title: 'Conductor',
+      subtitle: 'Ofrecer servicios de taxi',
+      icon: 'local-taxi',
+      color: '#059669',
+      description: 'Ideal para conductores que quieren ofrecer servicios de transporte.'
+    }
+  ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>cuzcatlansv.ride</Text>
-          <Text style={styles.subtitle}>Selecciona tu tipo de cuenta</Text>
-        </View>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>cuzcatlansv.ride</Text>
+        <Text style={styles.headerSubtitle}>Selecciona tu tipo de cuenta</Text>
+      </View>
 
-        <View style={styles.cardsContainer}>
-          <UserTypeCard
-            title="Usuario"
-            description="Solicita viajes y disfruta de un transporte seguro y confiable"
-            icon="👤"
-            userType="user"
-          />
-
-          <UserTypeCard
-            title="Conductor"
-            description="Ofrece servicios de transporte y gana dinero con tu vehículo"
-            icon="🚗"
-            userType="driver"
-          />
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>¿Ya tienes una cuenta?</Text>
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+      <View style={styles.content}>
+        {userTypes.map((userType, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.optionContainer}
+            onPress={() => handleUserTypeSelection(userType.type)}
+          >
+            <View style={styles.optionHeader}>
+              <View style={[styles.iconContainer, { backgroundColor: userType.color }]}>
+                <MaterialIcons name={userType.icon as any} size={32} color="#fff" />
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>{userType.title}</Text>
+                <Text style={styles.optionSubtitle}>{userType.subtitle}</Text>
+              </View>
+            </View>
+            <Text style={styles.optionDescription}>{userType.description}</Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        ))}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 30,
+    backgroundColor: '#f8fafc',
   },
   header: {
-    alignItems: 'center',
-    paddingTop: 80,
-    paddingBottom: 20,
+    padding: 20,
+    paddingTop: 50,
+    backgroundColor: '#2563EB',
   },
-  title: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#2563EB',
-    marginBottom: 32,
+    color: '#fff',
     textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 15,
-    color: '#11181C',
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#fff',
     textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.9,
   },
-  cardsContainer: {
+  content: {
     flex: 1,
-    paddingHorizontal: 16,
-    gap: 14,
+    padding: 20,
   },
-  card: {
+  optionContainer: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#2563EB',
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 16,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  cardContent: {
+  optionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  cardIcon: {
-    fontSize: 38,
-    marginBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2563EB',
-    marginBottom: 5,
-    textAlign: 'center',
-  },
-  cardDescription: {
-    fontSize: 13,
-    color: '#11181C',
-    textAlign: 'center',
-    marginBottom: 14,
-    lineHeight: 18,
-  },
-  registerButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
-  },
-  registerButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  footer: {
-    padding: 18,
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
   },
-  footerText: {
-    color: '#a0a0a0',
-    fontSize: 15,
-    marginBottom: 10,
+  optionText: {
+    flex: 1,
   },
-  loginButton: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
-  loginButtonText: {
-    color: '#1a1a2e',
-    fontSize: 15,
+  optionTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  optionSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
   },
 }); 

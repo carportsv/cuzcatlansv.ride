@@ -20,6 +20,14 @@
             "package_name": "com.carposv.taxizkt",
             "certificate_hash": "1756ccff528d591c7b0a186b3f747ec49c072bd4"
           }
+        },
+        {
+          "client_id": "570692523770-je2ja901blcu6nn48ubbv6p048v3k5fp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.carposv.taxizkt",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
         }
       ],
       "api_key": [
@@ -29,7 +37,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "570692523770-bi0bs3j5fadlboh8ahqc0j7k7jr662t7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

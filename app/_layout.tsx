@@ -1,3 +1,4 @@
+import { AppReadyProvider, useAppReady } from '@/contexts/AppReadyContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserProvider } from '@/contexts/UserContext';
 import { Stack } from 'expo-router';
@@ -12,20 +13,22 @@ import SplashVideo from './components/SplashVideo';
 // Mantener la splash screen visible mientras se carga la app
 SplashScreen.preventAutoHideAsync();
 
-function RootLayout() {
+function RootLayoutInner() {
   const colorScheme = useColorScheme();
-  const [appIsReady, setAppIsReady] = useState(false);
+  const { appIsReady, setAppIsReady } = useAppReady();
   const [showVideo, setShowVideo] = useState(true);
 
   useEffect(() => {
+    console.log('[Layout] Iniciando preparación de la app...');
     async function prepare() {
       try {
-        // Simular tiempo de carga para mostrar el video
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      } catch (e) {
-        console.warn(e);
-      } finally {
+        // Reducir tiempo de carga de 3 segundos a 1 segundo
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('[Layout] Preparación completada, marcando app como lista');
         setAppIsReady(true);
+      } catch (e) {
+        console.warn('[Layout] Error en preparación:', e);
+        setAppIsReady(true); // Marcar como lista incluso si hay error
       }
     }
 
@@ -33,17 +36,23 @@ function RootLayout() {
   }, []);
 
   const handleVideoEnd = () => {
+    console.log('[Layout] Video terminado, ocultando splash');
     setShowVideo(false);
     SplashScreen.hideAsync();
   };
+
+  console.log('[Layout] Render:', { showVideo, appIsReady });
 
   if (showVideo) {
     return <SplashVideo onVideoEnd={handleVideoEnd} />;
   }
 
   if (!appIsReady) {
+    console.log('[Layout] App no está lista, mostrando null');
     return null; // Mantener la splash screen visible
   }
+
+  console.log('[Layout] App lista, renderizando stack');
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -51,8 +60,7 @@ function RootLayout() {
         <AuthProvider>
           <UserProvider>
             <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="user-type-selection" />
+              <Stack.Screen name="index" />
               <Stack.Screen name="login" />
               <Stack.Screen name="register/user" />
               <Stack.Screen name="register/driver" />
@@ -64,6 +72,7 @@ function RootLayout() {
               <Stack.Screen name="driver/driver_settings" />
               <Stack.Screen name="driver/driver_profile" />
               <Stack.Screen name="driver/driver_history" />
+              <Stack.Screen name="driver/driver_registration" />
               <Stack.Screen name="user/user_active_ride" />
               <Stack.Screen name="user/user_drivers" />
               <Stack.Screen name="user/user_history" />
@@ -88,4 +97,10 @@ function RootLayout() {
   );
 }
 
-export default RootLayout;
+export default function RootLayout() {
+  return (
+    <AppReadyProvider>
+      <RootLayoutInner />
+    </AppReadyProvider>
+  );
+}

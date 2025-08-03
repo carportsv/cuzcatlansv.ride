@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-src 'self' https://www.google.com https://www.gstatic.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; connect-src 'self' https: wss:;">
+    <title>Cuzcatlansv.ride - Taxi App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <!-- Leaflet CSS para mapas -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JavaScript para mapas -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="logo-large">🚗</div>
+            <h1>Cuzcatlansv.ride</h1>
+            <div class="loading-spinner"></div>
+            <p>Cargando aplicación...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Simple Header -->
+        <header class="app-header">
+            <div class="app-title">
+                <i class="fas fa-car"></i>
+                <span>cuzcatlansv.ride</span>
+            </div>
+        </header>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="form-container">
+            <h1 class="login-title">Iniciar Sesión</h1>
+            
+            <!-- Phone Input -->
+            <div class="phone-input-container">
+                <div class="country-selector">
+                    <img src="https://flagcdn.com/w20/sv.png" alt="SV" class="country-flag">
+                    <span class="country-code">+503</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <input type="tel" id="phoneNumber" class="phone-input" placeholder="Número de teléfono" maxlength="8">
+            </div>
+            
+            <!-- Send Code Button -->
+            <button id="sendCodeBtn" class="btn btn-primary btn-full">
+                Enviar código de verificación
+            </button>
+            
+            <!-- reCAPTCHA Container -->
+            <div id="phoneAuthBtn" class="recaptcha-container"></div>
+            
+            <!-- Google Sign-In Button -->
+            <button id="googleSignInBtn" class="btn btn-google">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon">
+                Continuar con Google
+            </button>
+            
+            <!-- Recover Account Link -->
+            <a href="#" id="recoverAccount" class="recover-link">
+                ¿Olvidaste tu cuenta?
+            </a>
+        </div>
+
+        <!-- Map Container -->
+        <div id="mapContainer" class="map-container hidden">
+            <div id="map" class="map"></div>
+            
+            <!-- Back to Menu Button -->
+            <button id="backToMenuBtn" class="back-to-menu-btn" onclick="taxiApp.backToUserMenu()">
+                <i class="fas fa-arrow-left"></i>
+                <span>Volver al Menú</span>
+            </button>
+            
+            <!-- Search Form -->
+            <div class="search-form passenger-only">
+                <div class="search-inputs">
+                    <input type="text" id="origin" placeholder="¿Desde dónde?" class="search-input">
+                    <input type="text" id="destination" placeholder="¿A dónde vas?" class="search-input">
+                </div>
+                <button id="searchBtn" class="btn btn-primary btn-full passenger-only">
+                    <i class="fas fa-search"></i>
+                    Buscar Taxi
+                </button>
+            </div>
+
+            <!-- Driver Elements -->
+            <div class="driver-only" style="display: none;">
+                <div class="driver-status">
+                    <h3>Panel de Conductor</h3>
+                    <button id="toggleOnlineBtn" class="btn btn-success">
+                        <i class="fas fa-toggle-on"></i>
+                        Estar Online
+                    </button>
+                    <div class="driver-info">
+                        <p>Estado: <span id="driverStatus">Offline</span></p>
+                        <p>Viajes completados: <span id="completedRides">0</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Elements -->
+            <div class="admin-only" style="display: none;">
+                <div class="admin-panel">
+                    <h3>Panel de Administrador</h3>
+                    <div class="admin-stats">
+                        <div class="stat-card">
+                            <h4>Conductores Activos</h4>
+                            <span id="activeDrivers">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Viajes Hoy</h4>
+                            <span id="todayRides">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Ingresos</h4>
+                            <span id="todayEarnings">$0</span>
+                        </div>
+                    </div>
+                    <button id="manageUsersBtn" class="btn btn-primary">
+                        <i class="fas fa-users"></i>
+                        Gestionar Usuarios
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button id="menuBtn" class="quick-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <button id="locationBtn" class="quick-btn">
+                    <i class="fas fa-crosshairs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- User Menu Screen -->
+        <div id="userMenuScreen" class="menu-screen hidden">
+            <div class="user-home-container">
+                <!-- Header -->
+                <div class="user-header">
+                    <h2 class="user-header-title">cuzcatlansv.ride</h2>
+                    <p class="user-header-subtitle" id="userGreeting">Hola, Usuario</p>
+                </div>
+                
+                <!-- Menu Options -->
+                <div class="user-content">
+                    <div class="user-menu-options" id="userMenuOptions">
+                        <!-- Las opciones se generarán dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Driver Menu Screen -->
+        <div id="driverMenuScreen" class="menu-screen hidden">
+            <div class="menu-container">
+                <h2>🚗 Menú de Conductor</h2>
+                <div class="menu-options">
+                    <button class="menu-option" onclick="taxiApp.showDriverRequests()">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Solicitudes</span>
+                        <small>Ver solicitudes de viajes pendientes</small>
+                    </button>
+                    <button class="menu-option" onclick="taxiApp.showDriverAvailability()">
+                        <i class="fas fa-toggle-on"></i>
+                        <span>Disponibilidad</span>
+                        <small>Activar o desactivar disponibilidad</small>
+                    </button>
+                    <button class="menu-option" onclick="taxiApp.showDriverRide()">
+                        <i class="fas fa-car"></i>
+                        <span>Viaje Activo</span>
+                        <small>Gestionar viaje en curso</small>
+                    </button>
+                    <button class="menu-option" onclick="taxiApp.showDriverHistory()">
+                        <i class="fas fa-history"></i>
+                        <span>Historial de Viajes</span>
+                        <small>Ver viajes completados</small>
+                    </button>
+                    <button class="menu-option" onclick="taxiApp.showDriverSettings()">
+                        <i class="fas fa-cog"></i>
+                        <span>Configuración</span>
+                        <small>Ajustar preferencias de la app</small>
+                    </button>
+                    <button class="menu-option logout-option" onclick="taxiApp.handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Cerrar Sesión</span>
+                        <small>Salir de la aplicación</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Menu Screen -->
+        <div id="adminMenuScreen" class="menu-screen hidden">
+            <div class="admin-header">
+                <h1 class="admin-title">Panel de Administrador</h1>
+                <p class="admin-subtitle">Bienvenido, <span id="adminUserName">Admin</span></p>
+            </div>
+            <div class="admin-content">
+                <div class="admin-grid">
+                    <button class="admin-icon-button" onclick="taxiApp.showAdminDashboard()">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="admin-icon-button" onclick="taxiApp.showUserManagement()">
+                        <i class="fas fa-users"></i>
+                        <span>Usuarios</span>
+                    </button>
+                    <button class="admin-icon-button" onclick="taxiApp.showDriverManagement()">
+                        <i class="fas fa-taxi"></i>
+                        <span>Conductores</span>
+                    </button>
+                    <button class="admin-icon-button" onclick="taxiApp.showRideManagement()">
+                        <i class="fas fa-car"></i>
+                        <span>Viajes</span>
+                    </button>
+                    <button class="admin-icon-button" onclick="taxiApp.showReports()">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reportes</span>
+                    </button>
+                    <button class="admin-icon-button" onclick="taxiApp.showAutomation()">
+                        <i class="fas fa-cog"></i>
+                        <span>Automatización</span>
+                    </button>
+                    <button class="admin-icon-button admin-logout" onclick="taxiApp.handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" class="form-container hidden">
+            <div class="form-header">
+                <h2><i class="fas fa-user-plus"></i> Registrarse</h2>
+                <p>Crea tu cuenta para empezar a usar el servicio</p>
+            </div>
+            <form id="registerAuthForm">
+                <div class="input-group">
+                    <label for="registerName">
+                        <i class="fas fa-user"></i>
+                        Nombre completo
+                    </label>
+                    <input type="text" id="registerName" placeholder="Tu nombre completo" required>
+                </div>
+                <div class="input-group">
+                    <label for="registerEmail">
+                        <i class="fas fa-envelope"></i>
+                        Email
+                    </label>
+                    <input type="email" id="registerEmail" placeholder="tu@email.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="registerPassword">
+                        <i class="fas fa-lock"></i>
+                        Contraseña
+                    </label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required>
+                </div>
+                <div class="input-group">
+                    <label for="registerPhone">
+                        <i class="fas fa-phone"></i>
+                        Teléfono
+                    </label>
+                    <input type="tel" id="registerPhone" placeholder="+503 1234-5678" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-user-plus"></i>
+                    Registrarse
+                </button>
+                <div class="form-footer">
+                    <p>¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión aquí</a></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Ride Status -->
+        <div id="rideStatus" class="ride-status hidden">
+            <div class="ride-header">
+                <h3><i class="fas fa-taxi"></i> Estado del Viaje</h3>
+                <button id="cancelRide" class="btn btn-danger">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+            </div>
+            
+            <div class="driver-info">
+                <img id="driverPhoto" src="assets/images/default-driver.svg" alt="Conductor">
+                <div class="driver-details">
+                    <h4 id="driverName">Buscando conductor...</h4>
+                    <p id="driverCar">Modelo • Color • Placa</p>
+                    <div class="driver-rating">
+                        <i class="fas fa-star"></i>
+                        <span id="driverRating">4.8</span>
+                    </div>
+                </div>
+                <div class="driver-actions">
+                    <button id="callDriver" class="btn btn-secondary">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button id="messageDriver" class="btn btn-secondary">
+                        <i class="fas fa-comment"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="ride-progress">
+                <div class="progress-bar">
+                    <div class="progress" id="progressBar"></div>
+                </div>
+                <p id="rideStatusText">Buscando conductor...</p>
+                <p id="estimatedTime">Tiempo estimado: <span id="eta">--</span></p>
+            </div>
+
+            <div class="ride-details">
+                <div class="detail-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span id="rideOrigin">Origen</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fas fa-map-marker"></i>
+                    <span id="rideDestination">Destino</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span id="ridePrice">Precio estimado: $--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Menu -->
+        <div id="userMenu" class="user-menu hidden">
+            <div class="menu-header">
+                <img id="userPhoto" src="assets/images/default-user.svg" alt="Usuario">
+                <div class="user-info">
+                    <h4 id="menuUserName">Usuario</h4>
+                    <p id="menuUserEmail">usuario@email.com</p>
+                </div>
+            </div>
+            <div class="menu-items">
+                <a href="#" class="menu-item" id="profileLink">
+                    <i class="fas fa-user"></i>
+                    Mi Perfil
+                </a>
+                <a href="#" class="menu-item" id="historyLink">
+                    <i class="fas fa-history"></i>
+                    Historial de Viajes
+                </a>
+                <a href="#" class="menu-item" id="favoritesLink">
+                    <i class="fas fa-heart"></i>
+                    Direcciones Favoritas
+                </a>
+                <a href="#" class="menu-item" id="settingsLink">
+                    <i class="fas fa-cog"></i>
+                    Configuración
+                </a>
+                <a href="#" class="menu-item" id="helpLink">
+                    <i class="fas fa-question-circle"></i>
+                    Ayuda
+                </a>
+                <a href="#" class="menu-item" id="logoutLink">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notifications -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Development Hot Reload -->
+    <!-- <script>
+        // Hot Reload para desarrollo
+        (function() {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                const eventSource = new EventSource('/dev-events');
+                
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    console.log('🔄 Desarrollo:', data.message);
+                    
+                    // Si se modifica el archivo principal, recargar la página
+                    if (data.message.includes('Archivo principal modificado')) {
+                        console.log('🔄 Recargando página...');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    }
+                };
+                
+                eventSource.onerror = function(error) {
+                    console.log('❌ Error en hot reload, intentando reconectar...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                };
+                
+                console.log('🔄 Hot reload activado para desarrollo');
+            }
+        })();
+    </script> -->
+
+    <!-- Scripts de la aplicación -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/maps.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html> 

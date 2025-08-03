@@ -1,4 +1,6 @@
+import { useAppReady } from '@/contexts/AppReadyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { AuthService } from '@/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -13,7 +15,7 @@ import {
   TextStyle,
   TouchableOpacity,
   View,
-  ViewStyle,
+  ViewStyle
 } from 'react-native';
 import CountryPicker, { Country, getCallingCode } from 'react-native-country-picker-modal';
 import ModalVerificacion from '../app/ModalVerificacion';
@@ -166,18 +168,51 @@ export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [confirmResult, setConfirmResult] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const hasNavigatedRef = useRef(false);
   const phoneInput = useRef<any>(null);
   const router = useRouter();
-  const { login, verifyCode, isAuthenticated, user } = useAuth();
+  const { login, verifyCode, isAuthenticated, user, userType, refreshAuthState } = useAuth();
+  const { appIsReady } = useAppReady();
+  const recaptchaVerifier = useRef(null);
+
+  // Función para forzar actualización del contexto después del login con Google
+  const handleGoogleAuthComplete = async () => {
+    console.log('Login: Google auth completado, forzando actualización del contexto...');
+    // Resetear la bandera de navegación para un nuevo login
+    hasNavigatedRef.current = false;
+    // Forzar actualización del contexto de autenticación
+    await refreshAuthState();
+    console.log('Login: Contexto actualizado, verificando estado...');
+  };
 
   // Chequeo automático de sesión persistente
   React.useEffect(() => {
-    if (isAuthenticated && user) {
-      if (user.role === 'admin') router.replace('/admin/admin_home');
-      else if (user.role === 'driver') router.replace('/driver/driver_home');
-        else router.replace('/user/user_home');
-      }
-  }, [isAuthenticated, user]);
+    console.log('[Login] useEffect navegación:', { appIsReady, isAuthenticated, user: !!user, userType });
+    console.log('[Login] useEffect navegación - condiciones:', { 
+      appIsReady, 
+      isAuthenticated, 
+      user: !!user, 
+      userType,
+      todasCumplidas: appIsReady && isAuthenticated && user 
+    });
+    
+    if (appIsReady && isAuthenticated && user && !hasNavigatedRef.current) {
+      console.log('[Login] Condiciones cumplidas, navegando...');
+      hasNavigatedRef.current = true;
+      setTimeout(() => {
+        if (userType === 'admin') {
+          console.log('[Login] Navegando a admin_home');
+          router.replace('/admin/admin_home');
+        } else if (userType === 'driver') {
+          console.log('[Login] Navegando a driver_home');
+          router.replace('/driver/driver_home');
+        } else {
+          console.log('[Login] Navegando a user_home');
+          router.replace('/user/user_home');
+        }
+      }, 200); // Reducir delay de 400ms a 200ms
+    }
+  }, [appIsReady, isAuthenticated, user, userType, router]);
 
   const handleSendCode = async () => {
     try {
@@ -191,9 +226,11 @@ export default function LoginScreen() {
         Alert.alert('Error', 'No se pudo obtener el número formateado.');
         return;
       }
-
-      // Usar el servicio de autenticación real
-      const confirmation = await login(formatted.formattedNumber);
+      
+      hasNavigatedRef.current = false;
+      
+      // Usar el servicio de autenticación
+      const confirmation = await AuthService.sendVerificationCode(formatted.formattedNumber);
       setConfirmResult(confirmation);
       setShowModal(true);
       
@@ -205,22 +242,28 @@ export default function LoginScreen() {
 
   const handleVerificationSuccess = async (uid: string) => {
     try {
-      // Obtener el rol del usuario desde el contexto de autenticación
-      const userRole = user?.role || 'user';
       await AsyncStorage.setItem('userUID', uid);
-      await AsyncStorage.setItem('userRole', userRole);
       
-      // Navegar según el rol
-      if (userRole === 'admin') {
-        router.replace('/admin/admin_home');
-      } else if (userRole === 'driver') {
+      // Esperar un poco para que el contexto de autenticación se actualice
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Usar el userType del contexto de autenticación (que viene de Supabase)
+      console.log('[Login] handleVerificationSuccess - userType del contexto:', userType);
+      
+      // Navegar según el tipo de usuario del contexto
+      if (userType === 'driver') {
+        console.log('[Login] Navegando a driver_home (login por teléfono)');
         router.replace('/driver/driver_home');
+      } else if (userType === 'admin') {
+        console.log('[Login] Navegando a admin_home (login por teléfono)');
+        router.replace('/admin/admin_home');
       } else {
+        console.log('[Login] Navegando a user_home (login por teléfono)');
         router.replace('/user/user_home');
       }
     } catch (error) {
       console.error('Error verificando rol:', error);
-      Alert.alert('Error', 'No se pudo verificar el rol del usuario.');
+      router.replace('/user/user_home');
     }
   };
 
@@ -231,11 +274,31 @@ export default function LoginScreen() {
         return;
       }
 
-      await verifyCode(confirmResult, code);
+      await AuthService.verifyCodeAndSignIn(confirmResult, code);
       setShowModal(false);
       setConfirmResult(null);
       
-      // La navegación se manejará automáticamente en el useEffect
+      // Esperar un poco para que el contexto de autenticación se actualice
+      console.log('[Login] handleVerifyCode - esperando actualización del contexto...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verificar si ya se navegó desde el useEffect
+      if (hasNavigatedRef.current) {
+        console.log('[Login] handleVerifyCode - Ya se navegó desde useEffect, no navegando de nuevo');
+        return;
+      }
+      
+      // Obtener el UID del usuario autenticado después de la actualización
+      const uid = user?.uid;
+      console.log('[Login] handleVerifyCode - UID después de esperar:', uid);
+      
+      if (uid) {
+        await handleVerificationSuccess(uid);
+      } else {
+        console.log('[Login] handleVerifyCode - No hay UID, navegando por defecto a user_home');
+        // Si aún no hay usuario, ir a home de usuario
+        router.replace('/user/user_home');
+      }
       
     } catch (error: any) {
       console.error('Error verificando código:', error);
@@ -246,6 +309,10 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      {/* <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={firebaseConfig}
+      /> */}
       <Text style={styles.title}>Iniciar Sesión</Text>
       <CustomPhoneInput
         ref={phoneInput}
@@ -263,7 +330,14 @@ export default function LoginScreen() {
       <TouchableOpacity style={styles.button} onPress={handleSendCode}>
         <Text style={styles.buttonText}>Enviar código de verificación</Text>
       </TouchableOpacity>
-      <GoogleSignInButton onSuccess={() => router.replace('/user/user_home')} />
+      <GoogleSignInButton onAuthComplete={handleGoogleAuthComplete} />
+      
+      <TouchableOpacity 
+        style={styles.recoverButton} 
+        onPress={() => router.push('/recover-account')}
+      >
+        <Text style={styles.recoverButtonText}>¿Olvidaste tu cuenta?</Text>
+      </TouchableOpacity>
       
       <ModalVerificacion
         visible={showModal}
@@ -358,5 +432,15 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  recoverButton: {
+    marginTop: 16,
+    padding: 8,
+  },
+  recoverButtonText: {
+    color: '#6B7280',
+    fontSize: 14,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
 });

@@ -43,6 +43,11 @@ export default function AdminHome() {
       onPress: () => console.log('Reportes'),
     },
     {
+      title: 'Automatización',
+      icon: 'settings',
+      onPress: () => router.push('/admin/automation'),
+    },
+    {
       title: 'Cerrar Sesión',
       icon: 'logout',
       onPress: handleLogout,

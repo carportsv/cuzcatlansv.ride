@@ -1,3 +1,4 @@
+import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUser } from '@/contexts/UserContext';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -5,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ImageUpload from '../../src/components/ImageUpload';
+import { syncDriverDataManually } from '../../src/services/userFirestore';
 
 export default function DriverProfile() {
   const router = useRouter();
@@ -31,7 +33,7 @@ export default function DriverProfile() {
       name: fullName, 
       phone: editPhone, 
       email: editEmail,
-      nick: editNick.trim() || firstName.trim(),
+      nick: editNick.trim(),
       driverPhoto: editDriverPhoto
     });
     Alert.alert('Éxito', 'Perfil actualizado correctamente', [
@@ -41,10 +43,7 @@ export default function DriverProfile() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Perfil del Conductor</Text>
-        <Text style={styles.headerSubtitle}>Gestiona tu información personal</Text>
-      </View>
+      <AppHeader subtitle="Gestiona tu información personal" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileSection}>
@@ -128,6 +127,22 @@ export default function DriverProfile() {
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Guardar Cambios</Text>
         </TouchableOpacity>
+
+        {/* Botón temporal para sincronizar datos */}
+        <TouchableOpacity 
+          style={[styles.saveButton, { backgroundColor: '#059669', marginTop: 8 }]} 
+          onPress={async () => {
+            if (user?.uid) {
+              const success = await syncDriverDataManually(user.uid);
+              Alert.alert(
+                success ? 'Éxito' : 'Error',
+                success ? 'Datos sincronizados correctamente' : 'Error al sincronizar datos'
+              );
+            }
+          }}
+        >
+          <Text style={styles.saveButtonText}>Sincronizar Datos (Temporal)</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -137,21 +152,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   content: {
     flex: 1,

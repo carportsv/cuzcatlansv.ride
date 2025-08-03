@@ -1,21 +1,22 @@
 import { useAuth } from '@/contexts/AuthContext';
-import ModalVerificacion from '@/ModalVerificacion';
-import { AuthService } from '@/services/authService';
+import { syncUserWithSupabase } from '@/services/authService';
+import { getAuthInstanceAsync } from '@/services/firebaseConfig';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import CountryPicker, { Country, getCallingCode } from 'react-native-country-picker-modal';
 import GoogleSignInButton from '../../src/services/GoogleSignInButton';
+import ModalVerificacion from '../ModalVerificacion';
 
 const dropDown = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAi0lEQVRYR+3WuQ6AIBRE0eHL1T83FBqU5S1szdiY2NyTKcCAzU/Y3AcBXIALcIF0gRPAsehgugDEXnYQrUC88RIgfpuJ+MRrgFmILN4CjEYU4xJgFKIa1wB6Ec24FuBFiHELwIpQxa0ALUId9wAkhCmuBdQQ5ngP4I9wxXsBDyJ9m+8y/g9wAS7ABW4giBshQZji3AAAAABJRU5ErkJggg==";
 
@@ -153,6 +154,7 @@ const CustomPhoneInput = React.forwardRef<TextInput, CustomPhoneInputProps>(({
 
 export default function DriverRegistration() {
   const [formData, setFormData] = useState({
+    name: '',
     phoneNumber: '',
   });
   const [confirmResult, setConfirmResult] = useState<any>(null);
@@ -200,24 +202,23 @@ export default function DriverRegistration() {
     try {
       setLoading(true);
       
-      // Crear perfil de conductor
-      const formatted = phoneInput.current?.getNumberAfterPossiblyEliminatingZero();
-      await AuthService.createOrUpdateUserProfile({
-        uid,
-        name: '',
-        phoneNumber: formatted?.formattedNumber || formData.phoneNumber,
-        role: 'driver',
-      });
-
-      // Guardar información adicional del conductor en Firestore
-      const { saveUserData } = await import('@/services/userFirestore');
-      await saveUserData(uid, {
-        phoneNumber: formatted?.formattedNumber || formData.phoneNumber,
-        role: 'driver',
-        status: 'pending', // Pendiente de verificación
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+      // Obtener el usuario actual de Firebase
+      const auth = await getAuthInstanceAsync();
+      const firebaseUser = auth.currentUser;
+      
+      if (!firebaseUser) {
+        throw new Error('No hay usuario autenticado');
+      }
+      
+      // Sincronizar con Supabase
+      console.log('DriverRegistration: Sincronizando con Supabase...');
+      const syncResult = await syncUserWithSupabase(firebaseUser);
+      
+      if (!syncResult) {
+        console.warn('DriverRegistration: Error sincronizando con Supabase');
+      } else {
+        console.log('DriverRegistration: Usuario sincronizado con Supabase exitosamente');
+      }
 
       Alert.alert(
         'Registro Exitoso',
@@ -258,6 +259,16 @@ export default function DriverRegistration() {
         <View style={styles.form}>
           {/* Tarjeta de registro con teléfono */}
           <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nombre Completo</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre completo"
+                value={formData.name}
+                onChangeText={text => handleInputChange('name', text)}
+                autoCapitalize="words"
+              />
+            </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Número de Teléfono</Text>
               <CustomPhoneInput

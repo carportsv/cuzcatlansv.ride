@@ -1,3 +1,5 @@
+import AppHeader from '@/components/AppHeader';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUser } from '@/contexts/UserContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -6,6 +8,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 export default function UserSettingsScreen() {
   const router = useRouter();
   const { name, phone, email, nick, home, work } = useUser();
+  const { setUserType } = useAuth();
 
   const settingsOptions = [
     {
@@ -36,10 +39,7 @@ export default function UserSettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Configuración</Text>
-        <Text style={styles.headerSubtitle}>Ajusta tus preferencias</Text>
-      </View>
+      <AppHeader subtitle="Ajusta tus preferencias" />
       
       <View style={styles.profileSection}>
         <View style={styles.profileBox}>
@@ -81,21 +81,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   profileSection: {
     backgroundColor: '#fff',

@@ -1,10 +1,11 @@
+import AppHeader from '@/components/AppHeader';
 import { useUser } from '@/contexts/UserContext'; // Importar el hook
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function UserPerfilScreen() {
   const router = useRouter();
-  const { name, email } = useUser(); // Obtener datos del contexto
+  const { name, email, phone } = useUser(); // Obtener datos del contexto
 
   const handleEdit = () => {
     router.push('/user/user_perfil_edit');
@@ -12,7 +13,7 @@ export default function UserPerfilScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Perfil del Usuario</Text>
+      <AppHeader subtitle="Perfil del usuario" />
 
       <View style={styles.infoBox}>
         <Text style={styles.label}>Nombre:</Text>
@@ -21,12 +22,19 @@ export default function UserPerfilScreen() {
         <Text style={styles.label}>Correo:</Text>
         <Text style={styles.value}>{email || 'No disponible'}</Text>
 
+        <Text style={styles.label}>Teléfono:</Text>
+        <Text style={styles.value}>{phone || 'No disponible'}</Text>
+
         {/* <Text style={styles.label}>Rol:</Text>
         <Text style={styles.value}>user</Text> */}
       </View>
 
       <TouchableOpacity style={styles.button} onPress={handleEdit}>
         <Text style={styles.buttonText}>Editar Perfil</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.driverButton} onPress={() => router.push('/register/driver')}>
+        <Text style={styles.driverButtonText}>¿Quieres ser conductor? Hazte conductor</Text>
       </TouchableOpacity>
     </View>
   );
@@ -70,6 +78,20 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  driverButton: {
+    backgroundColor: '#fff',
+    borderColor: '#2563EB',
+    borderWidth: 2,
+    paddingVertical: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  driverButtonText: {
+    color: '#2563EB',
     fontSize: 16,
     fontWeight: 'bold',
   },

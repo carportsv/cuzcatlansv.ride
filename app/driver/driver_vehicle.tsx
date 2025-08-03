@@ -1,3 +1,4 @@
+import AppHeader from '@/components/AppHeader';
 import { useUser } from '@/contexts/UserContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,9 +8,10 @@ import ImageUpload from '../../src/components/ImageUpload';
 
 export default function DriverVehicleScreen() {
   const router = useRouter();
-  const { license, carModel, carColor, carPlate, vehiclePhoto, platePhoto, setUserData } = useUser();
+  const { license, carMake, carModel, carColor, carPlate, vehiclePhoto, platePhoto, setUserData } = useUser();
 
   const [editLicense, setEditLicense] = useState(license || '');
+  const [editCarMake, setEditCarMake] = useState(carMake || '');
   const [editCarModel, setEditCarModel] = useState(carModel || '');
   const [editCarColor, setEditCarColor] = useState(carColor || '');
   const [editCarPlate, setEditCarPlate] = useState(carPlate || '');
@@ -24,6 +26,7 @@ export default function DriverVehicleScreen() {
     
     setUserData({ 
       license: editLicense.trim(),
+      carMake: editCarMake.trim(),
       carModel: editCarModel.trim(),
       carColor: editCarColor.trim(),
       carPlate: editCarPlate.trim(),
@@ -37,10 +40,7 @@ export default function DriverVehicleScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Información del Vehículo</Text>
-        <Text style={styles.headerSubtitle}>Gestiona los datos de tu carro</Text>
-      </View>
+      <AppHeader subtitle="Gestiona los datos de tu carro" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileSection}>
@@ -63,12 +63,24 @@ export default function DriverVehicleScreen() {
         </View>
 
         <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Marca del Vehículo</Text>
+          <TextInput
+            style={styles.input}
+            value={editCarMake}
+            onChangeText={setEditCarMake}
+            placeholder="Ej: Toyota"
+            placeholderTextColor="#A3A3A3"
+            autoCapitalize="words"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Modelo del Carro</Text>
           <TextInput
             style={styles.input}
             value={editCarModel}
             onChangeText={setEditCarModel}
-            placeholder="Ej: Toyota Corolla"
+            placeholder="Ej: Corolla"
             placeholderTextColor="#A3A3A3"
             autoCapitalize="words"
           />
@@ -130,21 +142,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#2563EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 5,
   },
   content: {
     flex: 1,

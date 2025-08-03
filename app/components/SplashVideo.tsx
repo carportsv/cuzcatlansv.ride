@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Dimensions, Image, StyleSheet, View } from 'react-native';
-import Video from 'react-native-video';
+import { useEffect, useRef } from 'react';
+import { Animated, Dimensions, Image, StyleSheet, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -9,68 +8,90 @@ interface SplashVideoProps {
 }
 
 export default function SplashVideo({ onVideoEnd }: SplashVideoProps) {
-  const videoRef = useRef<any>(null);
-  const [hasError, setHasError] = useState(false);
-  const [ended, setEnded] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
-  const handleVideoEnd = () => {
-    if (!ended) {
-      setEnded(true);
-      onVideoEnd();
-    }
-  };
-
-  const handleVideoError = (error: any) => {
-    console.log('Video error:', error);
-    setHasError(true);
-    setTimeout(() => {
-      if (!ended) {
-        setEnded(true);
-        onVideoEnd();
-      }
-    }, 2000);
-  };
-
-  // Timeout de seguridad - si el video no termina en 7 segundos, continuar
   useEffect(() => {
-    const safetyTimeout = setTimeout(() => {
-      if (!ended) {
-        console.log('Safety timeout - continuing without video');
-        setEnded(true);
-        onVideoEnd();
-      }
-    }, 7000);
-    return () => clearTimeout(safetyTimeout);
-  }, [onVideoEnd, ended]);
+    console.log('[SplashVideo] Iniciando animación de splash...');
+    
+    // Animación de entrada
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animación de rotación sutil
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Simular duración del video (5 segundos como el original)
+    const timer = setTimeout(() => {
+      console.log('[SplashVideo] Animación completada');
+      onVideoEnd();
+    }, 5000); // 5 segundos como el video original
+
+    return () => clearTimeout(timer);
+  }, [onVideoEnd]);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   return (
     <View style={styles.container}>
-      {!hasError ? (
-        <Video
-          ref={videoRef}
-          source={require('../../assets/videos/cuzcatlansv.ride.mp4')}
-          style={styles.video}
+      <Animated.View 
+        style={[
+          styles.logoContainer,
+          {
+            opacity: fadeAnim,
+            transform: [
+              { scale: scaleAnim },
+              { rotate: spin }
+            ]
+          }
+        ]}
+      >
+        <Image 
+          source={require('../../assets/images/cuzcatlansv.png')}
+          style={styles.logo}
           resizeMode="contain"
-          onEnd={handleVideoEnd}
-          onError={handleVideoError}
-          repeat={false}
-          playInBackground={false}
-          playWhenInactive={false}
-          ignoreSilentSwitch="ignore"
-          muted={false}
-          volume={1.0}
-          paused={false}
-          rate={1.0}
         />
-      ) : (
-        <View style={styles.fallback}>
-          <Image 
-            source={require('../../assets/images/cuzcatlansv.png')}
-            style={styles.fallbackImage}
-            resizeMode="contain"
+      </Animated.View>
+      
+      {/* Efecto de partículas o puntos decorativos */}
+      <View style={styles.particles}>
+        {[...Array(6)].map((_, index) => (
+          <Animated.View
+            key={index}
+            style={[
+              styles.particle,
+              {
+                left: `${20 + index * 15}%`,
+                opacity: fadeAnim,
+                transform: [
+                  { scale: scaleAnim },
+                  { rotate: spin }
+                ]
+              }
+            ]}
           />
-        </View>
-      )}
+        ))}
+      </View>
     </View>
   );
 }
@@ -78,25 +99,31 @@ export default function SplashVideo({ onVideoEnd }: SplashVideoProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2563EB', // Color de fondo de tu app
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  fallback: {
-    flex: 1,
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#2563EB',
   },
-  fallbackImage: {
-    width: width * 0.6, // 60% del ancho de la pantalla
-    height: height * 0.3, // 30% del alto de la pantalla
+  logoContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  logo: {
+    width: width * 0.6,
+    height: height * 0.3,
+  },
+  particles: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
+  },
+  particle: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    top: '50%',
   },
 }); 

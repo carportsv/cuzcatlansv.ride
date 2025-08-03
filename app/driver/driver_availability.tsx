@@ -1,465 +1,421 @@
-import { acceptRide, RideData, updateDriverAvailability, watchRideRequests } from '@/services/rideService';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import firestore from '@react-native-firebase/firestore';
-import * as Device from 'expo-device';
+import AppHeader from '@/components/AppHeader';
+import OpenStreetMap from '@/components/OpenStreetMap';
+import { useAuth } from '@/contexts/AuthContext';
+import { LocationCoords } from '@/services/openStreetMapService';
+import { realtimeService } from '@/services/realtimeService';
+import { supabase } from '@/services/supabaseClient';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, AppState, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
-const SHEET_MIN_HEIGHT = height * 0.25;
-const SHEET_MAX_HEIGHT = height * 0.5;
-const SHEET_SNAP_POINTS = {
-  HIDDEN: height,
-  COLLAPSED: 0,
-  EXPANDED: -(SHEET_MAX_HEIGHT - SHEET_MIN_HEIGHT)
-};
-
-const LATITUDE_DELTA = 0.02;
-const LONGITUDE_DELTA = 0.02;
-
-const INITIAL_REGION = {
-  latitude: 13.6929403,
-  longitude: -89.2181911,
-  latitudeDelta: LATITUDE_DELTA,
-  longitudeDelta: LONGITUDE_DELTA,
-};
-
-const db = firestore();
-
-const DriverAvailabilityScreen = () => {
-  const [region, setRegion] = useState<Region>(INITIAL_REGION);
-  const [userLocation, setUserLocation] = useState<Region | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function DriverAvailability() {
+  const { user } = useAuth();
   const [isAvailable, setIsAvailable] = useState(false);
-  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
-  const [sheetVisible, setSheetVisible] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState<LocationCoords | null>(null);
+  const [markers, setMarkers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [driverId, setDriverId] = useState<string | null>(null);
-  const [rideRequests, setRideRequests] = useState<RideData[]>([]);
-  const sheetPosition = useRef(new Animated.Value(0)).current;
-  const mapRef = useRef<MapView>(null);
-  const router = useRouter();
-  const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          sheetPosition.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 50) {
-          toggleSheet(false);
+  useEffect(() => {
+    loadDriverData();
+    getCurrentLocation();
+  }, []);
+
+  // Conectar con sistema híbrido
+  const connectToHybridSystem = async () => {
+    if (!user?.uid) return;
+
+    const context = {
+      role: 'driver' as const,
+      hasActiveRide: false,
+      isAvailable: isAvailable,
+      isSearching: false
+    };
+
+    await realtimeService.realtimeManager.connectUser(user.uid, context);
+    
+    // Verificar si está usando realtime
+    const stats = realtimeService.realtimeManager.getStats();
+    setIsRealtimeActive(stats.activeConnections > 0);
+    
+    console.log('[DriverAvailability] Conectado al sistema híbrido:', stats);
+  };
+
+  // Actualizar contexto cuando cambie la disponibilidad
+  const updateDriverContext = async (available: boolean) => {
+    if (!user?.uid) return;
+
+    const context = {
+      role: 'driver' as const,
+      hasActiveRide: false,
+      isAvailable: available,
+      isSearching: false
+    };
+
+    // Reconectar con nueva prioridad
+    realtimeService.realtimeManager.disconnectUser(user.uid);
+    await realtimeService.realtimeManager.connectUser(user.uid, context);
+    
+    // Actualizar estado de realtime
+    const stats = realtimeService.realtimeManager.getStats();
+    setIsRealtimeActive(stats.activeConnections > 0);
+  };
+
+  // Limpiar al desmontar
+  useEffect(() => {
+    return () => {
+      if (user?.uid) {
+        realtimeService.realtimeManager.disconnectUser(user.uid);
+      }
+    };
+  }, [user?.uid]);
+
+  const loadDriverData = async () => {
+    if (!user?.uid) return;
+
+    try {
+      setLoading(true);
+      
+      // Obtener el user_id primero usando el firebase_uid
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('firebase_uid', user.uid)
+        .single();
+
+      if (userError) {
+        console.error('Error obteniendo usuario:', userError);
+        return;
+      }
+
+      // Obtener el driver_id usando el user_id
+      const { data: driverData, error: driverError } = await supabase
+        .from('drivers')
+        .select('id, is_available')
+        .eq('user_id', userData.id)
+        .single();
+
+      let currentDriverId: string | null = null;
+
+      if (driverError) {
+        console.error('Error cargando datos del conductor:', driverError);
+        
+        // Si no existe el conductor, crearlo
+        if (driverError.code === 'PGRST116') {
+          const { data: newDriver, error: createError } = await supabase
+            .from('drivers')
+            .insert({
+              user_id: userData.id,
+              is_available: false,
+              status: 'inactive'
+            })
+            .select('id, is_available')
+            .single();
+
+          if (createError) {
+            console.error('Error creando conductor:', createError);
+            return;
+          }
+
+          currentDriverId = newDriver.id;
+          setDriverId(newDriver.id);
+          setIsAvailable(newDriver.is_available || false);
         } else {
-          toggleSheet(true);
+          return;
         }
-      },
-    })
-  ).current;
+      } else {
+        currentDriverId = driverData.id;
+        setDriverId(driverData.id);
+        setIsAvailable(driverData.is_available || false);
+      }
 
-  const toggleSheet = (show: boolean, expand: boolean = false) => {
-    const toValue = show 
-      ? (expand ? SHEET_SNAP_POINTS.EXPANDED : SHEET_SNAP_POINTS.COLLAPSED) 
-      : SHEET_SNAP_POINTS.HIDDEN;
+      // Cargar marcadores de otros conductores
+      if (currentDriverId) {
+        const { data: otherDrivers } = await supabase
+          .from('drivers')
+          .select('id, location, is_available')
+          .eq('is_available', true)
+          .neq('id', currentDriverId);
 
-    Animated.spring(sheetPosition, {
-      toValue,
-      useNativeDriver: true,
-      tension: 65,
-      friction: 12
-    }).start(() => {
-      setSheetVisible(show);
-      setIsSheetExpanded(expand);
-    });
+        if (otherDrivers) {
+          const driverMarkers = otherDrivers.map(driver => ({
+            id: driver.id,
+            coordinate: driver.location,
+            title: 'Conductor disponible',
+            description: 'Otro conductor en el área'
+          }));
+          setMarkers(driverMarkers);
+        }
+      }
+
+      // Conectar con sistema híbrido después de cargar datos
+      await connectToHybridSystem();
+      
+    } catch (error) {
+      console.error('Error cargando datos del conductor:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getCurrentLocation = async () => {
     try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a tu ubicación para mostrar tu posición en el mapa');
+        return;
+      }
+
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
 
-      if (location?.coords?.latitude && location?.coords?.longitude) {
-        const newRegion = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: LATITUDE_DELTA,
-          longitudeDelta: LONGITUDE_DELTA,
-        };
-
-        setRegion(newRegion);
-        setUserLocation(newRegion);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert('Error', 'No se pudo obtener tu ubicación.');
-      setLoading(false);
-    }
-  };
-
-  const watchLocation = async () => {
-    try {
-      const locationSubscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 30000,
-          distanceInterval: 50
-        },
-        async (location) => {
-          if (location?.coords?.latitude && location?.coords?.longitude) {
-            const newRegion = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: LATITUDE_DELTA,
-              longitudeDelta: LONGITUDE_DELTA,
-            };
-            setUserLocation(newRegion);
-            setRegion(newRegion);
-
-            // Actualizar la ubicación en Firestore si el conductor está disponible
-            if (isAvailable && driverId) {
-              try {
-                await db.collection('drivers').doc(driverId).update({
-                  location: {
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude
-                  },
-                  updatedAt: new Date().toISOString(),
-                  isAvailable: true // Asegurarnos de que siga disponible
-                });
-              } catch (error) {
-                console.error('Error al actualizar ubicación:', error);
-              }
-            }
-          }
-        }
-      );
-
-      return () => {
-        if (locationSubscription) {
-          locationSubscription.remove();
-        }
+      const coords = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
       };
+
+      setCurrentLocation(coords);
+      console.log('📍 Ubicación obtenida:', coords);
+
+      // Actualizar ubicación en la base de datos si el conductor está disponible
+      if (driverId && isAvailable) {
+        await realtimeService.updateDriverLocation(driverId, coords);
+      }
     } catch (error) {
-      console.error('Error watching location:', error);
+      console.error('Error obteniendo ubicación:', error);
     }
   };
 
-  useEffect(() => {
-    let locationCleanup: (() => void) | undefined;
-
-    const initLocation = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        await getCurrentLocation();
-        locationCleanup = await watchLocation();
-      } else {
-        Alert.alert('Permiso denegado', 'Necesitamos acceso a tu ubicación para funcionar correctamente');
-      }
-    };
-
-    initLocation();
-
-    return () => {
-      if (locationCleanup) {
-        locationCleanup();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const loadDriverId = async () => {
-      const storedDriverId = await AsyncStorage.getItem('userUID');
-      setDriverId(storedDriverId);
-      
-      // Cargar el estado de disponibilidad guardado
-      const storedAvailability = await AsyncStorage.getItem('driverAvailability');
-      if (storedAvailability !== null) {
-        setIsAvailable(JSON.parse(storedAvailability));
-      }
-    };
-
-    loadDriverId();
-  }, []);
-
-  useEffect(() => {
-    if (!driverId) return;
-
-    console.log('Iniciando escucha de solicitudes de viaje...');
-    const unsubscribe = watchRideRequests(driverId, async (rides) => {
-      console.log('Solicitudes de viaje:', rides);
-      setRideRequests(rides as unknown as RideData[]);
-
-      // Enviar notificación por cada nueva solicitud
-      for (const ride of rides) {
-        try {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: '¡Nueva solicitud de viaje!',
-              body: `Viaje desde ${ride.origin.address}`,
-              data: { rideId: ride.id },
-              sound: true,
-              priority: Notifications.AndroidNotificationPriority.HIGH,
-            },
-            trigger: null, // Enviar inmediatamente
-          });
-        } catch (error) {
-          console.error('Error al enviar notificación:', error);
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [driverId]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // Si el conductor está disponible, mantener el estado
-        if (isAvailable && driverId) {
-          try {
-            await updateDriverAvailability(driverId, true);
-            await AsyncStorage.setItem('driverAvailability', JSON.stringify(true));
-          } catch (error) {
-            console.error('Error al mantener disponibilidad:', error);
-          }
-        }
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [isAvailable, driverId]);
-
-  const toggleAvailability = async () => {
+  const handleAvailabilityToggle = async (value: boolean) => {
     if (!driverId) {
-      Alert.alert('Error', 'No se pudo obtener el ID del conductor');
+      Alert.alert('Error', 'No se pudo identificar al conductor');
       return;
     }
 
-    const newAvailability = !isAvailable;
     try {
-      await updateDriverAvailability(driverId, newAvailability);
-      setIsAvailable(newAvailability);
-      // Guardar el estado de disponibilidad en AsyncStorage
-      await AsyncStorage.setItem('driverAvailability', JSON.stringify(newAvailability));
-    } catch (error) {
-      console.error('Error al actualizar disponibilidad:', error);
-      Alert.alert('Error', 'No se pudo actualizar la disponibilidad');
-    }
-  };
+      setLoading(true);
 
-  const handleRideRequest = (ride: RideData) => {
-    Alert.prompt(
-      'Nueva solicitud de viaje',
-      `¿Cuál será el precio del viaje desde ${ride.origin.address}?`,
-      [
-        {
-          text: 'Rechazar',
-          style: 'cancel',
-        },
-        {
-          text: 'Aceptar',
-          onPress: async (price) => {
-            if (!driverId) return;
-            if (!price || isNaN(Number(price))) {
-              Alert.alert('Error', 'Por favor ingrese un precio válido');
-              return;
-            }
+      // Actualizar disponibilidad en la base de datos
+      const { error } = await supabase
+        .from('drivers')
+        .update({
+          is_available: value,
+          status: value ? 'active' : 'inactive',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', driverId);
 
-            try {
-              await acceptRide(ride.id, driverId, Number(price));
-              router.push('/driver/driver_ride');
-            } catch (error) {
-              console.error('Error al aceptar viaje:', error);
-              Alert.alert('Error', 'No se pudo aceptar el viaje');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-      'numeric'
-    );
-  };
-
-  const renderRideRequest = ({ item }: { item: RideData }) => (
-    <TouchableOpacity
-      style={styles.rideRequestItem}
-      onPress={() => handleRideRequest(item)}
-    >
-      <View style={styles.rideRequestInfo}>
-        <Text style={styles.rideRequestTitle}>Nueva solicitud de viaje</Text>
-        <Text style={styles.rideRequestAddress}>
-          Origen: {item.origin.address || 'Ubicación no especificada'}
-        </Text>
-        <Text style={styles.rideRequestTime}>
-          Hora: {new Date(item.createdAt).toLocaleTimeString()}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
-    </TouchableOpacity>
-  );
-
-  // Configurar las notificaciones
-  useEffect(() => {
-    registerForPushNotificationsAsync();
-  }, []);
-
-  async function registerForPushNotificationsAsync() {
-    let token;
-
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        Alert.alert('Error', 'Se necesitan permisos para las notificaciones push');
+      if (error) {
+        console.error('Error actualizando disponibilidad:', error);
+        Alert.alert('Error', 'No se pudo actualizar la disponibilidad');
         return;
       }
-      
-      token = (await Notifications.getExpoPushTokenAsync()).data;
-      setExpoPushToken(token);
 
-      // Guardar el token en Firestore
-      if (driverId && token) {
-        await db.collection('drivers').doc(driverId).update({
-          pushToken: token,
-          updatedAt: new Date().toISOString()
-        });
+      setIsAvailable(value);
+
+      // Actualizar contexto en el sistema híbrido
+      await updateDriverContext(value);
+
+      // Mostrar mensaje de confirmación
+      if (value) {
+        Alert.alert(
+          'Disponible',
+          'Ahora estás disponible para recibir solicitudes de viaje',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'No Disponible',
+          'Ya no estás disponible para recibir solicitudes',
+          [{ text: 'OK' }]
+        );
       }
-    } else {
-      Alert.alert('Error', 'Las notificaciones push requieren un dispositivo físico');
+
+    } catch (error) {
+      console.error('Error en toggle de disponibilidad:', error);
+      Alert.alert('Error', 'Ocurrió un error al cambiar la disponibilidad');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleUpdateLocation = async () => {
+    await getCurrentLocation();
+    Alert.alert('Ubicación Actualizada', 'Tu ubicación ha sido actualizada en el sistema');
+  };
+
+  // Crear marcadores del mapa
+  const mapMarkers = [];
+
+  // Agregar marcador del conductor actual
+  if (currentLocation) {
+    mapMarkers.push({
+      id: 'current-driver',
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
+      title: 'Tu ubicación',
+      color: isAvailable ? '#4CAF50' : '#F44336'
+    });
   }
 
-  // Configurar el manejador de notificaciones
-  useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
-      console.log('Notificación recibida:', notification);
-    });
+  // Agregar marcadores de otros conductores
+  markers.forEach(marker => {
+    if (marker.coordinate) {
+      mapMarkers.push({
+        id: `driver-${marker.id}`,
+        latitude: marker.coordinate.latitude,
+        longitude: marker.coordinate.longitude,
+        title: marker.title,
+        color: '#2563EB'
+      });
+    }
+  });
 
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
-      const data = response.notification.request.content.data;
-      if (data.rideId) {
-        router.push('/driver/driver_availability');
-      }
-    });
-
-    return () => {
-      subscription.remove();
-      responseSubscription.remove();
-    };
-  }, []);
-
-  if (loading) {
+  if (loading && !currentLocation) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text>Cargando mapa...</Text>
+        <Text>Obteniendo tu ubicación...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        region={region}
-        showsUserLocation
-        showsMyLocationButton
+      <AppHeader subtitle="Gestiona tu disponibilidad" />
+      
+      <View style={styles.mapContainer}>
+          {currentLocation ? (
+            <OpenStreetMap
+              latitude={currentLocation.latitude}
+              longitude={currentLocation.longitude}
+              zoom={15}
+              markers={mapMarkers}
+              showUserLocation={true}
+              userLocation={currentLocation}
+            />
+          ) : (
+            <View style={styles.loadingMap}>
+              <ActivityIndicator size="large" color="#2563EB" />
+              <Text style={styles.loadingText}>Obteniendo tu ubicación...</Text>
+            </View>
+          )}
+      </View>
+
+      {/* Botón Flotante */}
+      <TouchableOpacity
+        style={[styles.floatingButton, isExpanded && styles.floatingButtonExpanded]}
+        onPress={() => setIsExpanded(!isExpanded)}
       >
-        {userLocation && (
-          <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
-            title="Tu ubicación"
+        {!isExpanded ? (
+          <MaterialIcons 
+            name="toggle-on" 
+            size={24} 
+            color="#fff" 
+          />
+        ) : (
+          <MaterialIcons 
+            name="close" 
+            size={24} 
+            color="#fff" 
           />
         )}
-      </MapView>
+      </TouchableOpacity>
 
-      <Animated.View
-        style={[
-          styles.sheet,
-          {
-            transform: [{ translateY: sheetPosition }],
-            zIndex: isSheetExpanded ? 2 : 1,
-          },
-        ]}
-      >
-        <View {...panResponder.panHandlers} style={styles.dragHandle}>
-          <View style={styles.handleIndicator} />
-        </View>
-        <View style={styles.sheetContent}>
-          <Text style={styles.title}>Estado del Conductor</Text>
-          <View style={styles.statusContainer}>
+      {/* Panel Expandido */}
+      {isExpanded && (
+        <View style={styles.expandedPanel}>
+          <Text style={styles.title}>Disponibilidad</Text>
+          
+          {/* Indicador de estado */}
+          <View style={styles.statusIndicator}>
+            <View style={[styles.statusDot, { backgroundColor: isAvailable ? '#4CAF50' : '#F44336' }]} />
             <Text style={styles.statusText}>
-              {isAvailable ? 'Estás disponible para recibir viajes' : 'No estás disponible para recibir viajes'}
+              {isAvailable ? 'Disponible' : 'No Disponible'}
             </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  { backgroundColor: isAvailable ? '#10B981' : '#E5E7EB', marginRight: 10 },
-                  { borderWidth: isAvailable ? 2 : 0, borderColor: '#10B981' },
-                ]}
-                disabled={isAvailable}
-                onPress={async () => {
-                  if (!isAvailable) await toggleAvailability();
-                }}
-              >
-                <Text style={[styles.buttonText, { color: isAvailable ? '#fff' : '#10B981' }]}>Disponible</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  { backgroundColor: !isAvailable ? '#E53E3E' : '#E5E7EB' },
-                  { borderWidth: !isAvailable ? 2 : 0, borderColor: '#E53E3E' },
-                ]}
-                disabled={!isAvailable}
-                onPress={async () => {
-                  if (isAvailable) await toggleAvailability();
-                }}
-              >
-                <Text style={[styles.buttonText, { color: !isAvailable ? '#fff' : '#E53E3E' }]}>No disponible</Text>
-              </TouchableOpacity>
-            </View>
+            {isRealtimeActive && (
+              <View style={styles.realtimeIndicator}>
+                <View style={styles.realtimeDot} />
+                <Text style={styles.realtimeText}>En tiempo real</Text>
+              </View>
+            )}
           </View>
+          
+          {/* Botones de control */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, isAvailable && styles.buttonActive]}
+              onPress={() => handleAvailabilityToggle(true)}
+              disabled={loading}
+            >
+              <MaterialIcons 
+                name="check-circle" 
+                size={20} 
+                color={isAvailable ? '#fff' : '#4CAF50'} 
+              />
+              <Text style={[styles.buttonText, isAvailable && styles.buttonTextActive]}>
+                Disponible
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.button, !isAvailable && styles.buttonActive]}
+              onPress={() => handleAvailabilityToggle(false)}
+              disabled={loading}
+            >
+              <MaterialIcons 
+                name="cancel" 
+                size={20} 
+                color={!isAvailable ? '#fff' : '#F44336'} 
+              />
+              <Text style={[styles.buttonText, !isAvailable && styles.buttonTextActive]}>
+                No Disponible
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Información de ubicación */}
+          {currentLocation && (
+            <View style={styles.locationInfo}>
+              <MaterialIcons name="location-on" size={16} color="#666" />
+              <Text style={styles.locationText}>
+                Lat: {currentLocation.latitude.toFixed(4)}, Lng: {currentLocation.longitude.toFixed(4)}
+              </Text>
+            </View>
+          )}
+          
+          {/* Botón para actualizar ubicación */}
+          <TouchableOpacity
+            style={styles.updateLocationButton}
+            onPress={handleUpdateLocation}
+            disabled={loading}
+          >
+            <MaterialIcons name="refresh" size={20} color="#2563EB" />
+            <Text style={styles.updateLocationText}>Actualizar Ubicación</Text>
+          </TouchableOpacity>
         </View>
-      </Animated.View>
+      )}
     </View>
   );
-};
-
-export default DriverAvailabilityScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
-  map: {
+  mapContainer: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+  },
+  loadingMap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   center: {
     flex: 1,
@@ -467,104 +423,183 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  sheet: {
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
+    fontFamily: 'Poppins',
+  },
+  floatingButton: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    minHeight: SHEET_MIN_HEIGHT,
-    maxHeight: SHEET_MAX_HEIGHT,
+    bottom: 30,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2563EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: 4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
-  dragHandle: {
-    width: '100%',
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+  floatingButtonExpanded: {
+    backgroundColor: '#E53E3E',
   },
-  handleIndicator: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#DEE1E6',
-    marginTop: 8,
-  },
-  sheetContent: {
-    flex: 1,
-    padding: 16,
+  expandedPanel: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 300,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 16,
     textAlign: 'center',
     color: '#1F2937',
+    fontFamily: 'Poppins',
   },
   statusContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 16,
   },
-  statusText: {
-    fontSize: 16,
-    color: '#4B5563',
-    marginBottom: 20,
-    textAlign: 'center',
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 12,
   },
   button: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
+    justifyContent: 'center',
+    backgroundColor: '#2563EB',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
+    fontFamily: 'Poppins',
   },
-  rideRequestItem: {
+  infoSection: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+  },
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    marginBottom: 10,
+    marginBottom: 0,
   },
-  rideRequestInfo: {
-    flex: 1,
+  infoText: {
+    fontSize: 13,
+    color: '#4B5563',
+    marginLeft: 8,
+    fontFamily: 'Poppins',
   },
-  rideRequestTitle: {
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  statusText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 4,
+    color: '#333',
+    fontFamily: 'Poppins',
   },
-  rideRequestAddress: {
-    fontSize: 14,
-    color: '#4B5563',
-    marginBottom: 4,
+  realtimeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
-  rideRequestTime: {
+  realtimeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50',
+    marginRight: 4,
+  },
+  realtimeText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  buttonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  buttonTextActive: {
+    color: '#fff',
+  },
+  locationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#F0F9EB',
+    borderRadius: 8,
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 8,
+    fontFamily: 'Poppins',
+  },
+  updateLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#E0F2FE',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2563EB',
+  },
+  updateLocationText: {
+    fontSize: 14,
+    color: '#2563EB',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    fontFamily: 'Poppins',
   },
 });

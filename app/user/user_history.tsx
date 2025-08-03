@@ -1,5 +1,8 @@
+import AppHeader from '@/components/AppHeader';
+import { supabase } from '@/services/supabaseClient';
+import { getUserData } from '@/services/userFirestore';
+import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import firestore from '@react-native-firebase/firestore';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -8,7 +11,7 @@ interface RideRequest {
   origin: { address: string };
   destination: { address: string };
   status: string;
-  createdAt: string;
+  createdAt: any;
 }
 
 const UserHistoryScreen = () => {
@@ -18,60 +21,81 @@ const UserHistoryScreen = () => {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  const PAGE_SIZE = 15; // Límite de resultados por página
+
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    const fetchUserIdAndListen = async () => {
-      const uid = await AsyncStorage.getItem('userUID');
-      setUserUID(uid);
-      if (!uid) {
+    const fetchUserIdAndLoadData = async () => {
+      const firebaseUid = await AsyncStorage.getItem('userUID');
+      setUserUID(firebaseUid);
+      if (!firebaseUid) {
         Alert.alert('Error', 'No se pudo obtener el ID del usuario');
         setLoading(false);
         return;
       }
-      const q = firestore()
-        .collection('rideRequests')
-        .where('userId', '==', uid)
-        .orderBy('createdAt', 'desc');
-
-      unsubscribe = q.onSnapshot((querySnapshot) => {
-        const ridesData: RideRequest[] = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            origin: data.origin,
-            destination: data.destination,
-            status: data.status,
-            createdAt: data.createdAt,
-          };
-        });
-        setRides(ridesData);
+      
+      // Obtener el user_id de Supabase usando el firebase_uid
+      const userData = await getUserData(firebaseUid);
+      if (!userData || !userData.id) {
+        Alert.alert('Error', 'No se pudo obtener el user_id de Supabase');
         setLoading(false);
-      });
+        return;
+      }
+      
+      await loadRideHistory(userData.id);
     };
-    fetchUserIdAndListen();
-    return () => { if (unsubscribe) unsubscribe(); };
+    
+    fetchUserIdAndLoadData();
   }, []);
+
+  const loadRideHistory = async (userId: string) => {
+    try {
+      setLoading(true);
+      
+      const { data: ridesData, error } = await supabase
+        .from('ride_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['requested', 'accepted', 'in_progress', 'completed', 'cancelled'])
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE);
+
+      if (error) {
+        console.error('Error al cargar historial:', error);
+        Alert.alert('Error', 'No se pudo cargar el historial de viajes');
+        return;
+      }
+
+      const formattedRides: RideRequest[] = ridesData.map(ride => ({
+        id: ride.id,
+        origin: ride.origin,
+        destination: ride.destination,
+        status: ride.status,
+        createdAt: ride.created_at,
+      }));
+
+      setRides(formattedRides);
+    } catch (error) {
+      console.error('Error al cargar historial:', error);
+      Alert.alert('Error', 'No se pudo cargar el historial de viajes');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleManualRefresh = async () => {
     if (!userUID) return;
     setLoading(true);
-    const q = firestore()
-      .collection('rideRequests')
-      .where('userId', '==', userUID)
-      .orderBy('createdAt', 'desc');
-    const querySnapshot = await q.get();
-    const ridesData: RideRequest[] = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        origin: data.origin,
-        destination: data.destination,
-        status: data.status,
-        createdAt: data.createdAt,
-      };
-    });
-    setRides(ridesData);
-    setLoading(false);
+    try {
+      // Obtener el user_id de Supabase usando el firebase_uid
+      const userData = await getUserData(userUID);
+      if (userData && userData.id) {
+        await loadRideHistory(userData.id);
+      }
+    } catch (error) {
+      console.error('Error al refrescar:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelect = (id: string) => {
@@ -80,21 +104,62 @@ const UserHistoryScreen = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
+    
     Alert.alert(
-      'Borrar viajes',
-      `¿Seguro que deseas borrar ${selectedIds.length} viaje(s)? Esta acción no se puede deshacer.`,
+      'Confirmar eliminación',
+      `¿Estás seguro de que quieres eliminar ${selectedIds.length} viaje(s) del historial?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Borrar', style: 'destructive', onPress: async () => {
-          for (const id of selectedIds) {
-            await firestore().collection('rideRequests').doc(id).delete();
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // En Supabase, podemos marcar como eliminado o usar soft delete
+              // Por ahora, solo eliminamos de la vista local
+              setRides(prev => prev.filter(ride => !selectedIds.includes(ride.id)));
+              setSelectedIds([]);
+              setSelectMode(false);
+            } catch (error) {
+              console.error('Error al eliminar viajes:', error);
+              Alert.alert('Error', 'No se pudieron eliminar los viajes seleccionados');
+            }
           }
-          setRides(rides.filter(r => !selectedIds.includes(r.id)));
-          setSelectedIds([]);
-          setSelectMode(false);
-        }}
+        }
       ]
     );
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '#10B981';
+      case 'cancelled':
+        return '#EF4444';
+      case 'in_progress':
+        return '#F59E0B';
+      case 'accepted':
+        return '#3B82F6';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Completado';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'in_progress':
+        return 'En Progreso';
+      case 'accepted':
+        return 'Aceptado';
+      case 'pending':
+        return 'Pendiente';
+      default:
+        return status;
+    }
   };
 
   const renderItem = ({ item }: { item: RideRequest }) => (
@@ -108,36 +173,53 @@ const UserHistoryScreen = () => {
     >
       {selectMode && (
         <View style={styles.selectionIndicator}>
-          <Text style={styles.selectionText}>
-            {selectedIds.includes(item.id) ? '✅' : '⬜️'}
-          </Text>
+          <MaterialIcons 
+            name={selectedIds.includes(item.id) ? 'check-circle' : 'radio-button-unchecked'} 
+            size={24} 
+            color={selectedIds.includes(item.id) ? '#2563EB' : '#9CA3AF'} 
+          />
         </View>
       )}
       
       <View style={styles.cardHeader}>
         <View style={styles.cardIconContainer}>
-          <Text style={styles.cardIcon}>🚗</Text>
+          <MaterialIcons name="local-taxi" size={24} color="#fff" />
         </View>
         <View style={styles.cardTitleContainer}>
           <Text style={styles.cardTitle}>Viaje #{item.id?.slice(-6)}</Text>
-          <Text style={styles.cardStatus}>{item.status}</Text>
+          <Text style={[styles.cardStatus, { color: getStatusColor(item.status) }]}>
+            {getStatusText(item.status)}
+          </Text>
         </View>
       </View>
       
       <View style={styles.cardContent}>
         <View style={styles.locationContainer}>
-          <Text style={styles.locationLabel}>📍 Origen:</Text>
+          <View style={styles.locationRow}>
+            <MaterialIcons name="my-location" size={16} color="#2563EB" />
+            <Text style={styles.locationLabel}>Origen:</Text>
+          </View>
           <Text style={styles.locationText}>{item.origin?.address || 'No disponible'}</Text>
         </View>
         
         <View style={styles.locationContainer}>
-          <Text style={styles.locationLabel}>🎯 Destino:</Text>
+          <View style={styles.locationRow}>
+            <MaterialIcons name="place" size={16} color="#EF4444" />
+            <Text style={styles.locationLabel}>Destino:</Text>
+          </View>
           <Text style={styles.locationText}>{item.destination?.address || 'No disponible'}</Text>
         </View>
         
         <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>📅 Fecha:</Text>
-          <Text style={styles.dateText}>{new Date(item.createdAt).toLocaleString()}</Text>
+          <View style={styles.locationRow}>
+            <MaterialIcons name="schedule" size={16} color="#6B7280" />
+            <Text style={styles.dateLabel}>Fecha:</Text>
+          </View>
+          <Text style={styles.dateText}>
+            {item.createdAt?.toDate?.()?.toLocaleString('es-ES') || 
+             new Date(item.createdAt).toLocaleString('es-ES') || 
+             'Fecha no disponible'}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -147,73 +229,82 @@ const UserHistoryScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text>Cargando historial...</Text>
+        <Text style={styles.loadingText}>Cargando historial...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Historial de Viajes</Text>
-        <Text style={styles.headerSubtitle}>Revisa tus viajes anteriores</Text>
-      </View>
-      
-      <View style={styles.content}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.actionButton, loading && styles.actionButtonDisabled]} 
-            onPress={handleManualRefresh}
-            disabled={loading}
-          >
-            <Text style={[styles.actionButtonText, loading && styles.actionButtonTextDisabled]}>
-              {loading ? '⏳ Actualizando...' : '🔄 Actualizar'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.actionButton, selectMode && styles.actionButtonActive]} 
-            onPress={() => {
-              if (selectMode) {
-                setSelectMode(false);
-                setSelectedIds([]);
-              } else {
-                setSelectMode(true);
-              }
-            }}
-          >
-            <Text style={[styles.actionButtonText, selectMode && styles.actionButtonTextActive]}>
-              {selectMode ? "❌ Cancelar" : "✅ Seleccionar"}
-            </Text>
-          </TouchableOpacity>
-          
-          {selectMode && selectedIds.length > 0 && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteSelected}>
-              <Text style={styles.deleteButtonText}>🗑️ Borrar ({selectedIds.length})</Text>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <AppHeader subtitle="Historial de viajes" />
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.actionButton, loading && styles.actionButtonDisabled]} 
+              onPress={handleManualRefresh}
+              disabled={loading}
+            >
+              <MaterialIcons 
+                name={loading ? 'hourglass-empty' : 'refresh'} 
+                size={20} 
+                color={loading ? '#9CA3AF' : '#2563EB'} 
+              />
+              <Text style={[styles.actionButtonText, loading && styles.actionButtonTextDisabled]}>
+                {loading ? 'Actualizando...' : 'Actualizar'}
+              </Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, selectMode && styles.actionButtonActive]} 
+              onPress={() => {
+                if (selectMode) {
+                  setSelectMode(false);
+                  setSelectedIds([]);
+                } else {
+                  setSelectMode(true);
+                }
+              }}
+            >
+              <MaterialIcons 
+                name={selectMode ? 'close' : 'check-box'} 
+                size={20} 
+                color={selectMode ? '#fff' : '#2563EB'} 
+              />
+              <Text style={[styles.actionButtonText, selectMode && styles.actionButtonTextActive]}>
+                {selectMode ? "Cancelar" : "Seleccionar"}
+              </Text>
+            </TouchableOpacity>
+            
+            {selectMode && selectedIds.length > 0 && (
+              <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteSelected}>
+                <MaterialIcons name="delete" size={20} color="#fff" />
+                <Text style={styles.deleteButtonText}>Borrar ({selectedIds.length})</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {rides.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconContainer}>
+                <MaterialIcons name="history" size={48} color="#fff" />
+              </View>
+              <Text style={styles.emptyTitle}>No hay viajes registrados</Text>
+              <Text style={styles.emptyDescription}>
+                Aún no tienes viajes en tu historial. 
+                Los viajes completados aparecerán aquí automáticamente.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={rides}
+              keyExtractor={item => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
           )}
         </View>
-        
-        {rides.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconContainer}>
-              <Text style={styles.emptyIcon}>🚗</Text>
-            </View>
-            <Text style={styles.emptyTitle}>No hay viajes registrados</Text>
-            <Text style={styles.emptyDescription}>
-              Aún no tienes viajes en tu historial. 
-              Los viajes completados aparecerán aquí automáticamente.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={rides}
-            keyExtractor={item => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
       </View>
     </View>
   );
@@ -224,25 +315,7 @@ export default UserHistoryScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
-  },
-  header: {
-    padding: 16,
-    paddingTop: 60,
-    backgroundColor: '#2563EB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#fff',
-    textAlign: 'center',
+    backgroundColor: '#f8fafc',
   },
   content: {
     flex: 1,
@@ -255,24 +328,33 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#555',
-    textAlign: 'center',
+    fontWeight: '600',
+    color: '#2563EB',
+    marginLeft: 8,
+    fontFamily: 'Poppins',
   },
   actionButtonDisabled: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#ddd',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
   },
   actionButtonTextDisabled: {
-    color: '#999',
+    color: '#9CA3AF',
   },
   actionButtonActive: {
     backgroundColor: '#2563EB',
@@ -282,43 +364,49 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   deleteButton: {
-    padding: 16,
-    backgroundColor: '#ef4444',
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   deleteButtonText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#fff',
-    textAlign: 'center',
+    marginLeft: 8,
+    fontFamily: 'Poppins',
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    elevation: 3,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
   cardSelected: {
-    borderColor: '#ef4444',
+    borderColor: '#2563EB',
     borderWidth: 2,
   },
   selectionIndicator: {
     position: 'absolute',
-    right: 10,
-    top: 10,
-  },
-  selectionText: {
-    fontSize: 18,
+    right: 12,
+    top: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   cardIconContainer: {
     backgroundColor: '#2563EB',
@@ -326,98 +414,102 @@ const styles = StyleSheet.create({
     padding: 12,
     marginRight: 12,
   },
-  cardIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
   cardTitleContainer: {
     flex: 1,
-    alignItems: 'center',
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
-    textAlign: 'center',
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+    fontFamily: 'Poppins',
   },
   cardStatus: {
     fontSize: 12,
-    color: '#2563EB',
     fontWeight: '600',
-    textAlign: 'center',
+    fontFamily: 'Poppins',
   },
   cardContent: {
     flex: 1,
   },
   locationContainer: {
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  locationRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   locationLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 2,
-    textAlign: 'center',
+    color: '#6B7280',
+    marginLeft: 4,
+    fontFamily: 'Poppins',
   },
   locationText: {
     fontSize: 14,
-    color: '#333',
+    color: '#1F2937',
     lineHeight: 20,
-    textAlign: 'center',
+    marginLeft: 20,
+    fontFamily: 'Poppins',
   },
   dateContainer: {
     marginBottom: 8,
-    alignItems: 'center',
   },
   dateLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 2,
-    textAlign: 'center',
+    color: '#6B7280',
+    marginLeft: 4,
+    fontFamily: 'Poppins',
   },
   dateText: {
     fontSize: 14,
-    color: '#333',
+    color: '#1F2937',
     lineHeight: 20,
-    textAlign: 'center',
+    marginLeft: 20,
+    fontFamily: 'Poppins',
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
+    fontFamily: 'Poppins',
   },
   emptyCard: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 32,
   },
   emptyIconContainer: {
     backgroundColor: '#2563EB',
     borderRadius: 50,
-    padding: 16,
-  },
-  emptyIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    padding: 20,
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 16,
+    fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: '#1F2937',
+    textAlign: 'center',
+    fontFamily: 'Poppins',
   },
   emptyDescription: {
     fontSize: 14,
-    color: '#555',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
+    fontFamily: 'Poppins',
+    marginBottom: 24,
   },
   list: {
     paddingBottom: 16,

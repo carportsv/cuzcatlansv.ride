@@ -2,8 +2,8 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: 'sv.tazkt',
-    slug: 'sv-tazkt',
+    name: 'cuzcatlansv.ride (OpenStreet)',
+    slug: 'sv-tazkt-openstreet',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
@@ -21,8 +21,8 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.carposv.taxizkt',
-      config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+      runtimeVersion: {
+        policy: "appVersion"
       }
     },
     android: {
@@ -31,24 +31,20 @@ export default {
         backgroundColor: '#ffffff'
       },
       package: 'com.carposv.taxizkt',
-      config: {
-        googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-        },
-      },
       permissions: [
         'ACCESS_FINE_LOCATION',
         'ACCESS_COARSE_LOCATION',
         'INTERNET',
       ],
+      runtimeVersion: "1.0.0"
     },
     web: {
       favicon: './assets/images/favicon.png',
+      bundler: 'webpack',
     },
     extra: {
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       eas: {
-        projectId: "af146e2b-f3cc-4d0c-8afd-7fb7c4ef8170"
+        projectId: "289efbd4-c735-426e-a091-39c0b2d7d02b"
       }
     },
     plugins: [

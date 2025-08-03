@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { AuthService } from '@/services/authService';
+import { syncUserWithSupabase } from '@/services/authService';
+import { getAuthInstanceAsync } from '@/services/firebaseConfig';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -154,10 +155,12 @@ const CustomPhoneInput = React.forwardRef<TextInput, CustomPhoneInputProps>(({
 export default function UserRegistration() {
   const [formData, setFormData] = useState({
     phoneNumber: '',
+    email: '',
   });
   const [confirmResult, setConfirmResult] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'phone' | 'verification'>('phone');
   const phoneInput = useRef<any>(null);
   const router = useRouter();
   const { login, verifyCode } = useAuth();
@@ -171,6 +174,12 @@ export default function UserRegistration() {
       Alert.alert('Error', 'Por favor ingresa un número de teléfono válido.');
       return false;
     }
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      Alert.alert('Error', 'Por favor ingresa un email válido.');
+      return false;
+    }
+    
     return true;
   };
 
@@ -188,9 +197,21 @@ export default function UserRegistration() {
       const confirmation = await login(formatted.formattedNumber);
       setConfirmResult(confirmation);
       setShowModal(true);
+      setStep('verification');
     } catch (error: any) {
       console.error('Error al enviar el código:', error);
-      Alert.alert('Error', 'No se pudo enviar el código de verificación. Intenta de nuevo.');
+      
+      let errorMessage = 'No se pudo enviar el código de verificación. Intenta de nuevo.';
+      
+      if (error.code === 'auth/invalid-phone-number') {
+        errorMessage = 'El número de teléfono no es válido.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Demasiados intentos. Espera unos minutos antes de intentar de nuevo.';
+      } else if (error.code === 'auth/quota-exceeded') {
+        errorMessage = 'Se ha excedido el límite de SMS. Intenta más tarde.';
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -200,23 +221,23 @@ export default function UserRegistration() {
     try {
       setLoading(true);
       
-      // Crear perfil de usuario
-      const formatted = phoneInput.current?.getNumberAfterPossiblyEliminatingZero();
-      await AuthService.createOrUpdateUserProfile({
-        uid,
-        name: '',
-        phoneNumber: formatted?.formattedNumber || formData.phoneNumber,
-        role: 'user',
-      });
-
-      const { saveUserData } = await import('@/services/userFirestore');
-      await saveUserData(uid, {
-        phoneNumber: formatted?.formattedNumber || formData.phoneNumber,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+      // Obtener el usuario actual de Firebase
+      const auth = await getAuthInstanceAsync();
+      const firebaseUser = auth.currentUser;
+      
+      if (!firebaseUser) {
+        throw new Error('No hay usuario autenticado');
+      }
+      
+      // Sincronizar con Supabase
+      console.log('UserRegistration: Sincronizando con Supabase...');
+      const syncResult = await syncUserWithSupabase(firebaseUser);
+      
+      if (!syncResult) {
+        console.warn('UserRegistration: Error sincronizando con Supabase');
+      } else {
+        console.log('UserRegistration: Usuario sincronizado con Supabase exitosamente');
+      }
 
       Alert.alert(
         'Registro Exitoso',
@@ -258,24 +279,55 @@ export default function UserRegistration() {
         </View>
 
         <View style={styles.form}>
+          {/* Indicador de progreso */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressStep, step === 'phone' && styles.progressStepActive]}>
+              <Text style={[styles.progressText, step === 'phone' && styles.progressTextActive]}>1</Text>
+            </View>
+            <View style={styles.progressLine} />
+            <View style={[styles.progressStep, step === 'verification' && styles.progressStepActive]}>
+              <Text style={[styles.progressText, step === 'verification' && styles.progressTextActive]}>2</Text>
+            </View>
+          </View>
+
           {/* Tarjeta de registro con teléfono */}
           <View style={styles.card}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Número de Teléfono</Text>
+              <Text style={styles.label}>Número de Teléfono *</Text>
               <CustomPhoneInput
                 ref={phoneInput}
                 onChangeFormattedText={(text) => handleInputChange('phoneNumber', text)}
                 placeholder="Número de teléfono"
                 containerStyle={styles.phoneInputContainer}
               />
+              <Text style={styles.helperText}>
+                Recibirás un código SMS para verificar tu número
+              </Text>
             </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email (Opcional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="tu@email.com"
+                value={formData.email}
+                onChangeText={(text) => handleInputChange('email', text)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={styles.helperText}>
+                Para recuperación de cuenta y notificaciones importantes
+              </Text>
+            </View>
+            
             <TouchableOpacity
               style={[styles.registerButton, loading && styles.registerButtonDisabled]}
               onPress={handleSendCode}
               disabled={loading}
             >
               <Text style={styles.registerButtonText}>
-                {loading ? 'Enviando...' : 'Registrarse'}
+                {loading ? 'Enviando código...' : 'Enviar código SMS'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -453,5 +505,42 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
+  },
+  helperText: {
+    color: '#6B7280',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  progressStep: {
+    width: 40,
+    height: 40,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  progressStepActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  progressLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#E5E7EB',
+  },
+  progressText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  progressTextActive: {
+    color: '#fff',
   },
 }); 

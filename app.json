@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "cuzcatlansv.ride",
-    "slug": "cuzcatlansv.ride",
+    "name": "cuzcatlansv.ride (OpenStreet)",
+    "slug": "sv-tazkt-openstreet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -26,7 +26,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.carposv.cuzcatlansvride",
+      "bundleIdentifier": "com.carposv.taxizkt",
       "icon": "./assets/images/icon.png"
     },
     "android": {
@@ -34,7 +34,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2563EB"
       },
-      "package": "com.carposv.cuzcatlansvride",
+      "package": "com.carposv.taxizkt",
       "useNextNotificationsApi": true,
       "icon": "./assets/images/icon.png"
     },
