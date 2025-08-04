@@ -1,0 +1,393 @@
+/* Componentes específicos */
+
+/* ===== MARCADORES DE MAPA ===== */
+
+/* Marcador de ubicación actual */
+.current-location-marker {
+    background: var(--primary-color);
+    border: 3px solid white;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Marcador de resultado de búsqueda */
+.search-result-marker {
+    background: var(--warning-color);
+    border: 2px solid white;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Marcador de dirección seleccionada */
+.selected-address-marker {
+    background: var(--success-color);
+    border: 3px solid white;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Marcador personalizado */
+.custom-marker {
+    background: var(--secondary-color);
+    border: 2px solid white;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ===== POPUPS DE MAPA ===== */
+
+/* Popup de resultado de búsqueda */
+.search-result-popup {
+    text-align: center;
+    min-width: 200px;
+}
+
+.search-result-popup h4 {
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.search-result-popup .btn {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+/* Popup de dirección seleccionada */
+.selected-address-popup {
+    text-align: center;
+    min-width: 200px;
+}
+
+.selected-address-popup h4 {
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.selected-address-popup p {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* ===== DIÁLOGOS ===== */
+
+/* Diálogo de permisos de ubicación */
+.location-permission-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.dialog-content {
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-medium);
+}
+
+.dialog-content h3 {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.dialog-content p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.dialog-actions .btn {
+    min-width: 100px;
+}
+
+/* ===== CONTROLES DE MAPA ===== */
+
+/* Control de ubicación */
+.location-control {
+    width: 40px;
+    height: 40px;
+    background: var(--surface-color);
+    border: none;
+    border-radius: 50%;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-light);
+}
+
+.location-control:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ===== BOTONES PEQUEÑOS ===== */
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+/* ===== CONTENIDO DE NOTIFICACIONES ===== */
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.notification-content i {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.notification-content span {
+    flex: 1;
+}
+
+/* ===== ESTADOS DE CARGA ===== */
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.loading-spinner-large {
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top: 6px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* ===== RESPONSIVE PARA COMPONENTES ===== */
+
+@media (max-width: 768px) {
+    .dialog-content {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .dialog-actions {
+        flex-direction: column;
+    }
+    
+    .dialog-actions .btn {
+        width: 100%;
+    }
+    
+    .search-result-popup,
+    .selected-address-popup {
+        min-width: 150px;
+    }
+    
+    .search-result-popup h4,
+    .selected-address-popup h4 {
+        font-size: 0.8rem;
+    }
+    
+    .search-result-popup .btn {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+/* ===== ANIMACIONES ADICIONALES ===== */
+
+/* Animación de entrada para marcadores */
+.marker-enter {
+    animation: markerEnter 0.3s ease-out;
+}
+
+@keyframes markerEnter {
+    from {
+        transform: scale(0) rotate(180deg);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+/* Animación de hover para controles */
+.leaflet-control:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* ===== ESTILOS PARA LEAFLET ===== */
+
+/* Personalizar controles de Leaflet */
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+.leaflet-control-zoom a {
+    background: var(--surface-color) !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    border-radius: var(--border-radius-small) !important;
+    margin: 2px !important;
+    transition: var(--transition) !important;
+}
+
+.leaflet-control-zoom a:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+}
+
+.leaflet-control-scale {
+    background: var(--surface-color) !important;
+    border: none !important;
+    border-radius: var(--border-radius-small) !important;
+    box-shadow: var(--shadow-light) !important;
+    padding: 0.5rem !important;
+}
+
+/* Personalizar popups de Leaflet */
+.leaflet-popup-content-wrapper {
+    background: var(--surface-color) !important;
+    border-radius: var(--border-radius-small) !important;
+    box-shadow: var(--shadow-medium) !important;
+    border: none !important;
+}
+
+.leaflet-popup-content {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.leaflet-popup-tip {
+    background: var(--surface-color) !important;
+    box-shadow: var(--shadow-medium) !important;
+}
+
+.leaflet-popup-close-button {
+    color: var(--text-secondary) !important;
+    font-size: 1.2rem !important;
+    padding: 0.5rem !important;
+    transition: var(--transition) !important;
+}
+
+.leaflet-popup-close-button:hover {
+    color: var(--danger-color) !important;
+}
+
+/* ===== UTILIDADES ADICIONALES ===== */
+
+/* Clase para elementos que necesitan sombra */
+.shadow {
+    box-shadow: var(--shadow-light);
+}
+
+.shadow-medium {
+    box-shadow: var(--shadow-medium);
+}
+
+/* Clase para elementos redondeados */
+.rounded {
+    border-radius: var(--border-radius-small);
+}
+
+.rounded-full {
+    border-radius: 50%;
+}
+
+/* Clase para elementos con transición */
+.transition {
+    transition: var(--transition);
+}
+
+/* Clase para elementos centrados */
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Clase para elementos con espacio entre elementos */
+.space-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Clase para elementos con gap */
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 1rem; }
+.gap-4 { gap: 1.5rem; } 
