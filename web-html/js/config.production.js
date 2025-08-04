@@ -1,13 +1,9 @@
 /**
- * Configuración de la aplicación de taxi
- * 
- * NOTA IMPORTANTE SOBRE SEGURIDAD:
- * Las claves de API se cargan desde variables de entorno para mayor seguridad.
- * En desarrollo local, estas variables se pueden configurar en un archivo .env
- * En producción, se configuran en el hosting (GitHub Pages, Netlify, etc.)
+ * Configuración de producción para la aplicación de taxi
+ * Este archivo se usa en producción y carga las variables desde el entorno
  */
 
-// Función para obtener variables de entorno de forma segura
+// Función para cargar variables de entorno de forma segura
 function getEnvVar(name, defaultValue = '') {
     // En el navegador, las variables de entorno se pueden acceder de diferentes formas
     // dependiendo del hosting (GitHub Pages, Netlify, Vercel, etc.)
@@ -23,51 +19,35 @@ function getEnvVar(name, defaultValue = '') {
         return metaTag.getAttribute('content');
     }
     
-    // Intentar obtener desde variables de entorno de Expo (EXPO_PUBLIC_*)
-    const expoName = `EXPO_PUBLIC_${name}`;
-    const expoMetaTag = document.querySelector(`meta[name="${expoName}"]`);
-    if (expoMetaTag) {
-        return expoMetaTag.getAttribute('content');
-    }
-    
     // Fallback al valor por defecto
     return defaultValue;
 }
 
 // Configuración de Firebase
 const CONFIG = {
-    // Configuración de Firebase
     FIREBASE_CONFIG: {
-        apiKey: getEnvVar('FIREBASE_API_KEY', ''),
-        authDomain: getEnvVar('FIREBASE_AUTH_DOMAIN', ''),
-        projectId: getEnvVar('FIREBASE_PROJECT_ID', ''),
-        storageBucket: getEnvVar('FIREBASE_STORAGE_BUCKET', ''),
-        messagingSenderId: getEnvVar('FIREBASE_MESSAGING_SENDER_ID', ''),
-        appId: getEnvVar('FIREBASE_APP_ID', '')
+        apiKey: getEnvVar('FIREBASE_API_KEY', "AIzaSyAJfonmq_9roRuSP3y9UXXEJHRxD3DhcNQ"),
+        authDomain: getEnvVar('FIREBASE_AUTH_DOMAIN', "taxi-zkt-7f276.firebaseapp.com"),
+        projectId: getEnvVar('FIREBASE_PROJECT_ID', "taxi-zkt-7f276"),
+        storageBucket: getEnvVar('FIREBASE_STORAGE_BUCKET', "taxi-zkt-7f276.appspot.com"),
+        messagingSenderId: getEnvVar('FIREBASE_MESSAGING_SENDER_ID', "570692523770"),
+        appId: getEnvVar('FIREBASE_APP_ID', "1:570692523770:web:26e5ad5e0c0ded43331b43")
     },
     
-    // Configuración de Supabase
-    SUPABASE_URL: getEnvVar('SUPABASE_URL', ''),
-    SUPABASE_ANON_KEY: getEnvVar('SUPABASE_ANON_KEY', ''),
+    SUPABASE_URL: getEnvVar('SUPABASE_URL', "https://wpecvlperiberbmsndlg.supabase.co"),
+    SUPABASE_ANON_KEY: getEnvVar('SUPABASE_ANON_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwZWN2bHBlcmliZXJibXNuZGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MzU0NDksImV4cCI6MjA2NzQxMTQ0OX0.Jx0UjYl1pblxsLXGOLSP5j0gzMyXq4arL_dzxN4YFcs"),
     
-    // Configuración de la aplicación
+    // Resto de la configuración igual que en config.js
     APP_NAME: "cuzcatlansv.ride",
-    
-    // Configuración de desarrollo
-    IS_DEVELOPMENT: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
-    
-    // URLs autorizadas para Firebase (actualizadas para hosting)
+    IS_DEVELOPMENT: false,
     AUTHORIZED_DOMAINS: [
         'localhost:8000',
         '127.0.0.1:8000',
         'taxi-zkt-7f276.firebaseapp.com',
-        // Agregar aquí tu dominio de GitHub Pages cuando lo tengas
-        // 'tu-usuario.github.io',
-        // 'tu-app.netlify.app',
-        // 'tu-app.vercel.app'
+        'carportsv.github.io',
+        '*.netlify.app',
+        '*.vercel.app'
     ],
-    
-    // Claves de almacenamiento
     STORAGE_KEYS: {
         USER_UID: 'userUID',
         USER_ROLE: 'userRole',
@@ -75,20 +55,14 @@ const CONFIG = {
         USER_NICK: 'userNick',
         USER_TOKEN: 'userToken'
     },
-
-    // Tipos de usuario (re-added)
     USER_TYPES: {
         PASSENGER: 'passenger',
         DRIVER: 'driver',
         ADMIN: 'admin'
     },
-
-    // Configuración de notificaciones (re-added)
     NOTIFICATIONS: {
-        AUTO_HIDE_DELAY: 3000 // 3 segundos
+        AUTO_HIDE_DELAY: 3000
     },
-
-    // Configuración del mapa
     MAP_CONFIG: {
         ZOOM: 13,
         MIN_ZOOM: 10,
@@ -96,15 +70,9 @@ const CONFIG = {
         TILE_LAYER: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         ATTRIBUTION: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     },
-
-    // Coordenadas por defecto (San Salvador, El Salvador)
     DEFAULT_LAT: 13.6929,
     DEFAULT_LNG: -89.2182,
-
-    // Color primario de la aplicación
     PRIMARY_COLOR: '#007bff',
-
-    // Configuración de validaciones
     VALIDATION: {
         EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         PHONE_REGEX: /^\+503[0-9]{8}$/,
@@ -114,8 +82,8 @@ const CONFIG = {
 
 // Environment detection
 const ENV = {
-    IS_DEVELOPMENT: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
-    IS_PRODUCTION: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1',
+    IS_DEVELOPMENT: false,
+    IS_PRODUCTION: true,
     IS_MOBILE: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
     IS_HTTPS: window.location.protocol === 'https:',
     IS_GITHUB_PAGES: window.location.hostname.includes('github.io'),
@@ -125,14 +93,13 @@ const ENV = {
 
 // Debug configuration
 const DEBUG = {
-    ENABLED: ENV.IS_DEVELOPMENT,
-    LOG_LEVEL: ENV.IS_DEVELOPMENT ? 'debug' : 'error',
-    SHOW_PERFORMANCE: ENV.IS_DEVELOPMENT
+    ENABLED: false,
+    LOG_LEVEL: 'error',
+    SHOW_PERFORMANCE: false
 };
 
 // Utility functions for configuration
 const ConfigUtils = {
-    // Get configuration value with fallback
     get: (key, defaultValue = null) => {
         const keys = key.split('.');
         let value = CONFIG;
@@ -148,7 +115,6 @@ const ConfigUtils = {
         return value;
     },
     
-    // Set configuration value
     set: (key, value) => {
         const keys = key.split('.');
         const lastKey = keys.pop();
@@ -164,27 +130,24 @@ const ConfigUtils = {
         obj[lastKey] = value;
     },
     
-    // Check if feature is enabled
     isFeatureEnabled: (feature) => {
         const features = {
             'realtime': true,
             'notifications': true,
             'geolocation': true,
             'offline_mode': false,
-            'analytics': ENV.IS_PRODUCTION
+            'analytics': true
         };
         
         return features[feature] || false;
     },
     
-    // Get API URL
     getApiUrl: (endpoint) => {
         const baseUrl = CONFIG.SUPABASE_URL;
         const apiEndpoint = CONFIG.API_ENDPOINTS[endpoint] || endpoint;
         return `${baseUrl}${apiEndpoint}`;
     },
     
-    // Get headers for API requests
     getHeaders: (includeAuth = true) => {
         const headers = {
             'Content-Type': 'application/json',
@@ -204,50 +167,49 @@ const ConfigUtils = {
 
 // ===== CONFIGURACIÓN DE SUPABASE =====
 
-// Crear instancia de Supabase usando fetch API (sin necesidad de librería externa)
+// Crear instancia de Supabase usando fetch API
 const supabase = {
     from: (table) => {
         return {
             select: (columns = '*') => {
                 return {
                     order: (column, options = {}) => {
-                                            return {
-                        then: async () => {
-                            try {
-                                const url = `${CONFIG.SUPABASE_URL}/rest/v1/${table}`;
-                                const queryParams = new URLSearchParams();
-                                
-                                if (columns !== '*') {
-                                    queryParams.append('select', columns);
-                                }
-                                
-                                if (options.ascending !== undefined) {
-                                    queryParams.append('order', `${column}.${options.ascending ? 'asc' : 'desc'}`);
-                                }
-                                
-                                const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
-                                
-                                const response = await fetch(fullUrl, {
-                                    method: 'GET',
-                                    headers: {
-                                        'apikey': CONFIG.SUPABASE_ANON_KEY,
-                                        'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
-                                        'Content-Type': 'application/json'
+                        return {
+                            then: async () => {
+                                try {
+                                    const url = `${CONFIG.SUPABASE_URL}/rest/v1/${table}`;
+                                    const queryParams = new URLSearchParams();
+                                    
+                                    if (columns !== '*') {
+                                        queryParams.append('select', columns);
                                     }
-                                });
-                                
-                                if (!response.ok) {
-                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                    
+                                    if (options.ascending !== undefined) {
+                                        queryParams.append('order', `${column}.${options.ascending ? 'asc' : 'desc'}`);
+                                    }
+                                    
+                                    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+                                    
+                                    const response = await fetch(fullUrl, {
+                                        method: 'GET',
+                                        headers: {
+                                            'apikey': CONFIG.SUPABASE_ANON_KEY,
+                                            'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+                                            'Content-Type': 'application/json'
+                                        }
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP error! status: ${response.status}`);
+                                    }
+                                    
+                                    const data = await response.json();
+                                    return { data, error: null };
+                                } catch (error) {
+                                    return { data: null, error };
                                 }
-                                
-                                const data = await response.json();
-                                return { data, error: null };
-                            } catch (error) {
-                                console.error('❌ Supabase: Error:', error);
-                                return { data: null, error };
                             }
-                        }
-                    };
+                        };
                     }
                 };
             },

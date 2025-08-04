@@ -4,6 +4,8 @@ class TaxiApp {
         this.currentUser = null;
         this.currentRide = null;
         this.isInitialized = false;
+        this.isLoadingUsers = false;
+        this.allUsers = []; // Almacenar todos los usuarios cargados
         // No inicializar automáticamente, se hará manualmente al final del archivo
     }
 
@@ -1296,6 +1298,7 @@ class TaxiApp {
         document.getElementById('userMenuScreen')?.classList.add('hidden');
         document.getElementById('driverMenuScreen')?.classList.add('hidden');
         document.getElementById('adminMenuScreen')?.classList.add('hidden');
+        document.getElementById('userManagementScreen')?.classList.add('hidden');
         document.getElementById('rideStatus')?.classList.add('hidden');
         
         // Ocultar pantallas de desarrollo
@@ -1602,7 +1605,295 @@ class TaxiApp {
     // Gestionar usuarios
     showUserManagement() {
         console.log('👥 Mostrando gestión de usuarios...');
-        this.showNotification('Gestión de usuarios - En desarrollo', 'info');
+        this.hideAllScreens();
+        document.getElementById('userManagementScreen').classList.remove('hidden');
+        this.loadUsers();
+    }
+
+    // Cargar usuarios desde Supabase
+    async loadUsers() {
+        // Evitar ejecuciones múltiples
+        if (this.isLoadingUsers) {
+            return;
+        }
+        
+        this.isLoadingUsers = true;
+        
+        try {
+            // Verificar si las variables de entorno están configuradas
+            if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
+                console.error('❌ Variables de entorno de Supabase no configuradas');
+                this.showError('Error: Variables de entorno de Supabase no configuradas. Verifica el archivo .env');
+                this.hideLoading();
+                this.isLoadingUsers = false;
+                return;
+            }
+            
+            this.showLoading('Cargando usuarios...');
+            
+            let users, error;
+            try {
+                const result = await supabase
+                    .from('users')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .then();
+                
+                users = result.data;
+                error = result.error;
+            } catch (supabaseError) {
+                console.error('❌ Error en la consulta a Supabase:', supabaseError);
+                error = supabaseError;
+            }
+
+            console.log('🔍 === DESPUÉS DEL TRY-CATCH ===');
+            console.log('🔍 Respuesta de Supabase:', { users, error });
+            console.log('🔍 Después de la consulta - users:', users);
+            console.log('🔍 Después de la consulta - error:', error);
+            console.log('🔍 === LLEGAMOS AQUÍ ===');
+            console.log('🔍 Tipo de users:', typeof users);
+            console.log('🔍 Es users un array?', Array.isArray(users));
+            
+            if (error) {
+                console.error('❌ Error cargando usuarios:', error);
+                this.showError('Error cargando usuarios: ' + error.message);
+                this.hideLoading();
+                return;
+            }
+            
+            // Almacenar todos los usuarios para filtrado local
+            this.allUsers = users || [];
+            
+            // Si no hay usuarios, mostrar mensaje informativo
+            if (!users || users.length === 0) {
+                this.showNotification('No hay usuarios registrados en la base de datos', 'info');
+            }
+            
+            this.displayUsers(users);
+            this.updateUserStats(users);
+            this.hideLoading();
+        } catch (error) {
+            console.error('❌ Error en loadUsers:', error);
+            this.showError('Error cargando usuarios: ' + error.message);
+            this.hideLoading();
+        } finally {
+            this.isLoadingUsers = false;
+        }
+    }
+
+    // Mostrar usuarios en la tabla
+    displayUsers(users) {
+        const tbody = document.getElementById('usersTableBody');
+        
+        if (!tbody) {
+            console.error('❌ No se encontró el elemento usersTableBody');
+            return;
+        }
+        
+        tbody.innerHTML = '';
+
+        if (!users || users.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <i class="fas fa-users" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                        No hay usuarios registrados
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            ${this.getUserInitials(user.display_name || user.email || 'Usuario')}
+                        </div>
+                        <div class="user-details">
+                            <h4>${user.display_name || 'Sin nombre'}</h4>
+                            <p>ID: ${user.firebase_uid}</p>
+                        </div>
+                    </div>
+                </td>
+                <td>${user.email || 'No especificado'}</td>
+                <td>${user.phone_number || 'No especificado'}</td>
+                <td>
+                    <span class="user-role ${user.role || 'user'}">
+                        ${this.getRoleDisplayName(user.role || 'user')}
+                    </span>
+                </td>
+                <td>
+                    <span class="user-status ${user.is_active ? 'active' : 'inactive'}">
+                        ${user.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td>${this.formatDate(user.updated_at || user.created_at)}</td>
+                <td>
+                    <div class="user-actions">
+                        <button class="action-btn view" onclick="taxiApp.viewUser('${user.id}')">
+                            <i class="fas fa-eye"></i>
+                            Ver
+                        </button>
+                        <button class="action-btn edit" onclick="taxiApp.editUser('${user.id}')">
+                            <i class="fas fa-edit"></i>
+                            Editar
+                        </button>
+                        <button class="action-btn delete" onclick="taxiApp.deleteUser('${user.id}')">
+                            <i class="fas fa-trash"></i>
+                            Eliminar
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Actualizar estadísticas de usuarios
+    updateUserStats(users) {
+        const totalUsers = users.length;
+        const activeUsers = users.filter(user => user.is_active).length;
+        const today = new Date();
+        const newUsers = users.filter(user => {
+            const userDate = new Date(user.created_at);
+            return userDate.toDateString() === today.toDateString();
+        }).length;
+
+        const totalElement = document.getElementById('totalUsers');
+        const activeElement = document.getElementById('activeUsers');
+        const newElement = document.getElementById('newUsers');
+        
+        if (totalElement) totalElement.textContent = totalUsers;
+        if (activeElement) activeElement.textContent = activeUsers;
+        if (newElement) newElement.textContent = newUsers;
+    }
+
+    // Obtener iniciales del usuario
+    getUserInitials(name) {
+        if (!name) return 'U';
+        return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 2);
+    }
+
+    // Obtener nombre de visualización del rol
+    getRoleDisplayName(role) {
+        const roleNames = {
+            'user': 'Usuario',
+            'driver': 'Conductor',
+            'admin': 'Administrador'
+        };
+        return roleNames[role] || 'Usuario';
+    }
+
+    // Formatear fecha
+    formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Filtrar usuarios
+    filterUsers() {
+        const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+        const roleFilter = document.getElementById('userRoleFilter').value;
+        const statusFilter = document.getElementById('userStatusFilter').value;
+
+        // Filtrar usuarios localmente
+        let filteredUsers = this.allUsers.filter(user => {
+            // Filtro de búsqueda por texto
+            const matchesSearch = !searchTerm || 
+                (user.display_name && user.display_name.toLowerCase().includes(searchTerm)) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm)) ||
+                (user.phone_number && user.phone_number.toLowerCase().includes(searchTerm)) ||
+                (user.firebase_uid && user.firebase_uid.toLowerCase().includes(searchTerm));
+
+            // Filtro por rol
+            const matchesRole = !roleFilter || user.role === roleFilter;
+
+            // Filtro por estado
+            const matchesStatus = !statusFilter || 
+                (statusFilter === 'active' && user.is_active) ||
+                (statusFilter === 'inactive' && !user.is_active);
+
+            return matchesSearch && matchesRole && matchesStatus;
+        });
+
+        // Mostrar usuarios filtrados
+        this.displayUsers(filteredUsers);
+        this.updateUserStats(filteredUsers);
+    }
+
+    // Refrescar lista de usuarios
+    refreshUserList() {
+        this.loadUsers();
+        this.showSuccess('Lista de usuarios actualizada');
+    }
+
+    // Ver usuario
+    viewUser(userId) {
+        console.log('👁️ Ver usuario:', userId);
+        this.showNotification('Función de ver usuario - En desarrollo', 'info');
+    }
+
+    // Editar usuario
+    editUser(userId) {
+        console.log('✏️ Editar usuario:', userId);
+        this.showNotification('Función de editar usuario - En desarrollo', 'info');
+    }
+
+    // Eliminar usuario
+    async deleteUser(userId) {
+        if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+            return;
+        }
+
+        try {
+            this.showLoading('Eliminando usuario...');
+            
+            const { error } = await supabase
+                .from('users')
+                .delete()
+                .eq('id', userId);
+
+            if (error) {
+                console.error('Error eliminando usuario:', error);
+                this.showError('Error eliminando usuario');
+                return;
+            }
+
+            this.showSuccess('Usuario eliminado exitosamente');
+            this.loadUsers(); // Recargar lista
+        } catch (error) {
+            console.error('Error en deleteUser:', error);
+            this.showError('Error eliminando usuario');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    // Navegación de páginas
+    previousUserPage() {
+        // Implementar paginación
+        this.showNotification('Paginación - En desarrollo', 'info');
+    }
+
+    nextUserPage() {
+        // Implementar paginación
+        this.showNotification('Paginación - En desarrollo', 'info');
+    }
+
+    // Volver al menú de administrador
+    backToAdminMenu() {
+        this.hideAllScreens();
+        document.getElementById('adminMenuScreen').classList.remove('hidden');
     }
 
     // Gestionar conductores

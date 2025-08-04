@@ -115,14 +115,46 @@ export class AuthService {
   static async signOut() {
     try {
       console.log('AuthService: Cerrando sesión...');
-      await (await getAuthInstanceAsync()).signOut();
+      
+      // Verificar si hay usuario autenticado en Firebase antes de intentar cerrar sesión
+      const auth = await getAuthInstanceAsync();
+      const currentUser = auth.currentUser;
+      
+      if (currentUser) {
+        console.log('AuthService: Usuario encontrado en Firebase, cerrando sesión...');
+        await auth.signOut();
+        console.log('AuthService: Sesión de Firebase cerrada exitosamente');
+      } else {
+        console.log('AuthService: No hay usuario autenticado en Firebase, limpiando solo datos locales');
+      }
+      
+      // Siempre limpiar datos locales, independientemente del estado de Firebase
       await AsyncStorage.removeItem('userSession');
       await AsyncStorage.removeItem('userUID');
       await AsyncStorage.removeItem('userRole');
+      await AsyncStorage.removeItem('userData');
+      await AsyncStorage.removeItem('userNick');
+      await AsyncStorage.removeItem('userToken');
+      
       console.log('AuthService: Sesión cerrada exitosamente');
     } catch (error) {
       console.error('AuthService: Error cerrando sesión:', error);
-      throw error;
+      
+      // Aunque haya error en Firebase, limpiar datos locales
+      try {
+        await AsyncStorage.removeItem('userSession');
+        await AsyncStorage.removeItem('userUID');
+        await AsyncStorage.removeItem('userRole');
+        await AsyncStorage.removeItem('userData');
+        await AsyncStorage.removeItem('userNick');
+        await AsyncStorage.removeItem('userToken');
+        console.log('AuthService: Datos locales limpiados después del error');
+      } catch (localError) {
+        console.error('AuthService: Error limpiando datos locales:', localError);
+      }
+      
+      // No lanzar el error para evitar que la app se rompa
+      console.log('AuthService: Sesión cerrada (con errores menores)');
     }
   }
 
