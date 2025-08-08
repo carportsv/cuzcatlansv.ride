@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <title>Test COOP Fix - Solución Cross-Origin-Opener-Policy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .config-value {
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 5px 0;
+            word-break: break-all;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .console-output {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .solution-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Test COOP Fix - Solución Cross-Origin-Opener-Policy</h1>
+        <p>Este archivo verifica que la solución del COOP funciona correctamente.</p>
+
+        <div class="test-section">
+            <h2>📋 Paso 1: Verificar Configuración COOP</h2>
+            <div id="coopInfo"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 Paso 2: Probar Google Sign-In</h2>
+            <button onclick="testGoogleSignIn()">Probar Google Sign-In</button>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Consola de Debug</h2>
+            <div id="consoleOutput" class="console-output"></div>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // Interceptar console para mostrar en la página
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function addToConsole(message, type = 'log') {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'warn' ? '#ffd93d' : '#51cf66';
+            consoleOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+
+        let authService = null;
+
+        // Verificar configuración COOP
+        function showCOOPInfo() {
+            const coopDiv = document.getElementById('coopInfo');
+
+            // Obtener la política COOP actual
+            const coopMeta = document.querySelector('meta[http-equiv="Cross-Origin-Opener-Policy"]');
+            const coopContent = coopMeta ? coopMeta.getAttribute('content') : 'No COOP encontrado';
+
+            let html = '<div class="test-result info">📋 Cross-Origin-Opener-Policy Actual:</div>';
+            html += `<div class="config-value">${coopContent}</div>`;
+
+            // Verificar si está configurado correctamente
+            if (coopContent === 'same-origin-allow-popups') {
+                html += '<div class="test-result success">✅ COOP configurado correctamente para permitir popups</div>';
+            } else {
+                html += '<div class="test-result error">❌ COOP no está configurado correctamente</div>';
+            }
+
+            // Verificar CSP también
+            const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+            const cspContent = cspMeta ? cspMeta.getAttribute('content') : 'No CSP encontrado';
+            
+            html += '<div class="test-result info">📋 Content Security Policy:</div>';
+            html += `<div class="config-value">${cspContent}</div>`;
+
+            const hasFirebaseDomain = cspContent.includes('taxi-zkt-7f276.firebaseapp.com');
+            if (hasFirebaseDomain) {
+                html += '<div class="test-result success">✅ CSP incluye dominio de Firebase</div>';
+            } else {
+                html += '<div class="test-result error">❌ CSP NO incluye dominio de Firebase</div>';
+            }
+
+            coopDiv.innerHTML = html;
+            return { coopContent, hasFirebaseDomain };
+        }
+
+        // Probar Google Sign-In
+        async function testGoogleSignIn() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="test-result info">🔄 Probando Google Sign-In...</div>';
+
+            try {
+                if (typeof AuthService === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ AuthService no está definido</div>';
+                    return;
+                }
+
+                authService = new AuthService();
+                await authService.init();
+
+                // Verificar que Firebase esté inicializado
+                if (!firebase || !firebase.auth) {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ Firebase no está disponible</div>';
+                    return;
+                }
+
+                // Crear proveedor de Google
+                const provider = new firebase.auth.GoogleAuthProvider();
+                
+                resultsDiv.innerHTML = '<div class="test-result success">✅ Google Sign-In configurado correctamente</div>';
+                resultsDiv.innerHTML += '<div class="test-result warning">⚠️ Para probar completamente, haz clic en "Continuar con Google" en la aplicación principal</div>';
+
+                // Verificar que no hay errores de COOP
+                const coopErrors = [];
+                const originalError = console.error;
+                console.error = function(...args) {
+                    const message = args.join(' ');
+                    if (message.includes('Cross-Origin-Opener-Policy') || message.includes('window.closed')) {
+                        coopErrors.push(message);
+                    }
+                    originalError.apply(console, args);
+                };
+
+                // Esperar un momento para detectar errores
+                setTimeout(() => {
+                    if (coopErrors.length === 0) {
+                        resultsDiv.innerHTML += '<div class="test-result success">✅ No se detectaron errores de COOP</div>';
+                    } else {
+                        resultsDiv.innerHTML += '<div class="test-result error">❌ Se detectaron errores de COOP:</div>';
+                        coopErrors.forEach(error => {
+                            resultsDiv.innerHTML += `<div class="config-value">${error}</div>`;
+                        });
+                    }
+                }, 2000);
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error en Google Sign-In: ${error.message}</div>`;
+            }
+        }
+
+        // Ejecutar diagnóstico inicial
+        window.addEventListener('load', function() {
+            console.log('🚀 Iniciando diagnóstico de COOP...');
+            showCOOPInfo();
+        });
+    </script>
+</body>
+</html> 

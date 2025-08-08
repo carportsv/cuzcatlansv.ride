@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Configuración de Autenticación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .config-value {
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 5px 0;
+            word-break: break-all;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .console-output {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔐 Test Configuración de Autenticación</h1>
+        <p>Este archivo verifica la configuración de Firebase y Supabase para detectar problemas de autenticación.</p>
+
+        <div class="test-section">
+            <h2>📋 Variables de Entorno</h2>
+            <div id="envVars"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Configuración de Firebase</h2>
+            <div id="firebaseConfig"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🗄️ Configuración de Supabase</h2>
+            <div id="supabaseConfig"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Pruebas de Funcionalidad</h2>
+            <button onclick="testConfigLoading()">Probar Carga de Configuración</button>
+            <button onclick="testFirebaseInit()">Probar Inicialización de Firebase</button>
+            <button onclick="testAuthService()">Probar Servicio de Autenticación</button>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Consola de Debug</h2>
+            <div id="consoleOutput" class="console-output"></div>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // Interceptar console.log para mostrar en la página
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function addToConsole(message, type = 'log') {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'warn' ? '#ffd93d' : '#51cf66';
+            consoleOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+
+        // Función para obtener variables de entorno
+        function getEnvVar(name) {
+            const metaTag = document.querySelector(`meta[name="${name}"]`);
+            if (metaTag) {
+                return metaTag.getAttribute('content');
+            }
+
+            const expoMetaTag = document.querySelector(`meta[name="EXPO_PUBLIC_${name}"]`);
+            if (expoMetaTag) {
+                return expoMetaTag.getAttribute('content');
+            }
+
+            return null;
+        }
+
+        // Mostrar variables de entorno
+        function showEnvVars() {
+            const envVarsDiv = document.getElementById('envVars');
+            const metaTags = document.querySelectorAll('meta[name^="EXPO_PUBLIC_"]');
+
+            if (metaTags.length === 0) {
+                envVarsDiv.innerHTML = '<div class="test-result error">❌ No se detectaron variables de entorno</div>';
+                return;
+            }
+
+            let html = '<div class="test-result success">✅ Variables de entorno detectadas:</div>';
+            metaTags.forEach(tag => {
+                const name = tag.getAttribute('name');
+                const value = tag.getAttribute('content');
+                const displayValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                html += `<div class="config-value">${name}: ${displayValue}</div>`;
+            });
+
+            envVarsDiv.innerHTML = html;
+        }
+
+        // Mostrar configuración de Firebase
+        function showFirebaseConfig() {
+            const firebaseDiv = document.getElementById('firebaseConfig');
+
+            const apiKey = getEnvVar('FIREBASE_API_KEY');
+            const authDomain = getEnvVar('FIREBASE_AUTH_DOMAIN');
+            const projectId = getEnvVar('FIREBASE_PROJECT_ID');
+            const storageBucket = getEnvVar('FIREBASE_STORAGE_BUCKET');
+            const messagingSenderId = getEnvVar('FIREBASE_MESSAGING_SENDER_ID');
+            const appId = getEnvVar('FIREBASE_APP_ID');
+
+            if (!apiKey || !authDomain || !projectId) {
+                firebaseDiv.innerHTML = '<div class="test-result error">❌ Variables de Firebase faltantes</div>';
+                return;
+            }
+
+            let html = '<div class="test-result success">✅ Configuración de Firebase detectada:</div>';
+            html += `<div class="config-value">API Key: ${apiKey.substring(0, 20)}...</div>`;
+            html += `<div class="config-value">Auth Domain: ${authDomain}</div>`;
+            html += `<div class="config-value">Project ID: ${projectId}</div>`;
+            html += `<div class="config-value">Storage Bucket: ${storageBucket}</div>`;
+            html += `<div class="config-value">Messaging Sender ID: ${messagingSenderId}</div>`;
+            html += `<div class="config-value">App ID: ${appId}</div>`;
+
+            firebaseDiv.innerHTML = html;
+        }
+
+        // Mostrar configuración de Supabase
+        function showSupabaseConfig() {
+            const supabaseDiv = document.getElementById('supabaseConfig');
+
+            const url = getEnvVar('SUPABASE_URL');
+            const key = getEnvVar('SUPABASE_ANON_KEY');
+
+            if (!url || !key) {
+                supabaseDiv.innerHTML = '<div class="test-result error">❌ Variables de Supabase faltantes</div>';
+                return;
+            }
+
+            let html = '<div class="test-result success">✅ Configuración de Supabase detectada:</div>';
+            html += `<div class="config-value">URL: ${url}</div>`;
+            html += `<div class="config-value">Anon Key: ${key.substring(0, 30)}...</div>`;
+
+            supabaseDiv.innerHTML = html;
+        }
+
+        // Probar carga de configuración
+        function testConfigLoading() {
+            const resultsDiv = document.getElementById('testResults');
+
+            try {
+                if (typeof CONFIG === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ CONFIG no está definido</div>';
+                    return;
+                }
+
+                let html = '<div class="test-result success">✅ CONFIG cargado correctamente:</div>';
+
+                // Verificar Firebase
+                if (CONFIG.FIREBASE_CONFIG) {
+                    html += '<div class="config-value">Firebase Config: ✅ Presente</div>';
+                    
+                    const requiredFirebaseKeys = ['apiKey', 'authDomain', 'projectId'];
+                    requiredFirebaseKeys.forEach(key => {
+                        if (CONFIG.FIREBASE_CONFIG[key]) {
+                            html += `<div class="config-value">Firebase ${key}: ✅ ${CONFIG.FIREBASE_CONFIG[key].substring(0, 20)}...</div>`;
+                        } else {
+                            html += `<div class="config-value">Firebase ${key}: ❌ No cargado</div>`;
+                        }
+                    });
+                } else {
+                    html += '<div class="config-value">Firebase Config: ❌ No presente</div>';
+                }
+
+                // Verificar Supabase
+                if (CONFIG.SUPABASE_URL) {
+                    html += '<div class="config-value">Supabase URL: ✅ Cargado</div>';
+                } else {
+                    html += '<div class="config-value">Supabase URL: ❌ No cargado</div>';
+                }
+
+                if (CONFIG.SUPABASE_ANON_KEY) {
+                    html += '<div class="config-value">Supabase Key: ✅ Cargado</div>';
+                } else {
+                    html += '<div class="config-value">Supabase Key: ❌ No cargado</div>';
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al cargar configuración: ${error.message}</div>`;
+            }
+        }
+
+        // Probar inicialización de Firebase
+        async function testFirebaseInit() {
+            const resultsDiv = document.getElementById('testResults');
+
+            try {
+                // Verificar si Firebase está disponible
+                if (typeof firebase === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="test-result warning">⚠️ Firebase SDK no cargado</div>';
+                    return;
+                }
+
+                // Intentar inicializar Firebase
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(CONFIG.FIREBASE_CONFIG);
+                }
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ Firebase inicializado correctamente</div>';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al inicializar Firebase: ${error.message}</div>`;
+            }
+        }
+
+        // Probar servicio de autenticación
+        async function testAuthService() {
+            const resultsDiv = document.getElementById('testResults');
+
+            try {
+                if (typeof AuthService === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ AuthService no está definido</div>';
+                    return;
+                }
+
+                const authService = new AuthService();
+                await authService.init();
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ AuthService inicializado correctamente</div>';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al inicializar AuthService: ${error.message}</div>`;
+            }
+        }
+
+        // Ejecutar todas las pruebas al cargar la página
+        window.addEventListener('load', function() {
+            console.log('🧪 Iniciando pruebas de configuración de autenticación...');
+            showEnvVars();
+            showFirebaseConfig();
+            showSupabaseConfig();
+            testConfigLoading();
+        });
+    </script>
+</body>
+</html> 

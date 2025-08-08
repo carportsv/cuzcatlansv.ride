@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Redirect URI - Solución Error 400</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .fix-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .code {
+            background: #f1f3f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border-left: 3px solid #007bff;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        h1 { color: #dc3545; }
+        h2 { color: #007bff; }
+        .highlight { background: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="fix-container">
+        <h1>🚨 Error 400: redirect_uri_mismatch</h1>
+        <p><strong>Problema:</strong> Firebase está enviando un URI de redirección que no está configurado en Google Cloud.</p>
+        
+        <div class="warning">
+            <strong>⚠️ Error específico:</strong> "Error 400: redirect_uri_mismatch"
+        </div>
+
+        <h2>🔧 Solución: Agregar URI de redirección de Firebase</h2>
+        
+        <div class="step">
+            <h3>Paso 1: Ir a Google Cloud Console</h3>
+            <p>Ve a: <a href="https://console.cloud.google.com/" target="_blank">https://console.cloud.google.com/</a></p>
+            <p>Selecciona tu proyecto: <span class="highlight">taxi-zkt</span></p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 2: Ir a Credenciales OAuth</h3>
+            <p>1. En el menú lateral, ve a <strong>APIs y servicios</strong></p>
+            <p>2. Haz clic en <strong>Credenciales</strong></p>
+            <p>3. Busca tu cliente OAuth: <span class="highlight">570692523770-logva41phptcir5h5hj07pmt6vtuovhj.apps.googleusercontent.com</span></p>
+            <p>4. Haz clic en el <strong>nombre del cliente</strong> para editarlo</p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 3: Agregar URIs de redirección</h3>
+            <p>En la sección <strong>"URIs de redirección autorizados"</strong>, agrega estos URIs:</p>
+            
+            <div class="code">
+https://taxi-zkt-7f276.firebaseapp.com/__/auth/handler
+https://taxi-zkt-7f276.firebaseapp.com/auth/handler
+https://taxi-zkt-7f276.firebaseapp.com/
+http://localhost:8000/__/auth/handler
+http://localhost:8000/auth/handler
+http://localhost:8000/
+http://127.0.0.1:8000/__/auth/handler
+http://127.0.0.1:8000/auth/handler
+http://127.0.0.1:8000/
+            </div>
+            
+            <p><strong>Importante:</strong> Estos son los URIs que Firebase usa para la autenticación.</p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 4: Guardar cambios</h3>
+            <p>1. Haz clic en <strong>"Guardar"</strong> o <strong>"Save"</strong></p>
+            <p>2. Espera unos segundos para que los cambios se propaguen</p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 5: Probar la aplicación</h3>
+            <p>1. Ve a: <a href="http://localhost:8000/" target="_blank">http://localhost:8000/</a></p>
+            <p>2. Haz clic en <strong>"Continuar con Google"</strong></p>
+            <p>3. El error "redirect_uri_mismatch" debería desaparecer</p>
+        </div>
+
+        <div class="success">
+            <strong>✅ Resultado esperado:</strong> Google Sign-In funcionando correctamente sin errores de redirección.
+        </div>
+
+        <h2>🔍 Explicación técnica:</h2>
+        <p>Cuando Firebase intenta autenticar con Google, envía un URI de redirección específico. Si ese URI no está en la lista de "URIs de redirección autorizados" en Google Cloud, Google rechaza la solicitud con el error 400.</p>
+        
+        <p>Los URIs que agregamos son los que Firebase usa automáticamente para manejar la autenticación después de que el usuario se autentique con Google.</p>
+    </div>
+</body>
+</html> 

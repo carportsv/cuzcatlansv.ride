@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Variables de Entorno</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .meta-tag {
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Inyección de Variables de Entorno</h1>
+        <p>Este archivo verifica si las variables de entorno se están inyectando correctamente por el servidor.</p>
+
+        <div class="test-section">
+            <h2>📋 Variables Detectadas</h2>
+            <div id="envVars"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Configuración de Firebase</h2>
+            <div id="firebaseConfig"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🗄️ Configuración de Supabase</h2>
+            <div id="supabaseConfig"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Estado del Sistema</h2>
+            <div id="systemStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        // Función para obtener variables de entorno desde meta tags
+        function getEnvVar(name) {
+            const metaTag = document.querySelector(`meta[name="${name}"]`);
+            if (metaTag) {
+                return metaTag.getAttribute('content');
+            }
+
+            const expoMetaTag = document.querySelector(`meta[name="EXPO_PUBLIC_${name}"]`);
+            if (expoMetaTag) {
+                return expoMetaTag.getAttribute('content');
+            }
+
+            return null;
+        }
+
+        // Mostrar variables de entorno detectadas
+        function showEnvVars() {
+            const envVarsDiv = document.getElementById('envVars');
+            const metaTags = document.querySelectorAll('meta[name^="EXPO_PUBLIC_"]');
+
+            if (metaTags.length === 0) {
+                envVarsDiv.innerHTML = '<div class="test-result error">❌ No se detectaron variables de entorno</div>';
+                return;
+            }
+
+            let html = '<div class="test-result success">✅ Variables de entorno detectadas:</div>';
+            metaTags.forEach(tag => {
+                const name = tag.getAttribute('name');
+                const value = tag.getAttribute('content');
+                const displayValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                html += `<div class="meta-tag">${name}: ${displayValue}</div>`;
+            });
+
+            envVarsDiv.innerHTML = html;
+        }
+
+        // Mostrar configuración de Firebase
+        function showFirebaseConfig() {
+            const firebaseDiv = document.getElementById('firebaseConfig');
+
+            const apiKey = getEnvVar('FIREBASE_API_KEY');
+            const authDomain = getEnvVar('FIREBASE_AUTH_DOMAIN');
+            const projectId = getEnvVar('FIREBASE_PROJECT_ID');
+
+            if (!apiKey || !authDomain || !projectId) {
+                firebaseDiv.innerHTML = '<div class="test-result error">❌ Variables de Firebase no encontradas</div>';
+                return;
+            }
+
+            let html = '<div class="test-result success">✅ Configuración de Firebase detectada:</div>';
+            html += `<div class="meta-tag">API Key: ${apiKey.substring(0, 20)}...</div>`;
+            html += `<div class="meta-tag">Auth Domain: ${authDomain}</div>`;
+            html += `<div class="meta-tag">Project ID: ${projectId}</div>`;
+
+            firebaseDiv.innerHTML = html;
+        }
+
+        // Mostrar configuración de Supabase
+        function showSupabaseConfig() {
+            const supabaseDiv = document.getElementById('supabaseConfig');
+
+            const url = getEnvVar('SUPABASE_URL');
+            const key = getEnvVar('SUPABASE_ANON_KEY');
+
+            if (!url || !key) {
+                supabaseDiv.innerHTML = '<div class="test-result error">❌ Variables de Supabase no encontradas</div>';
+                return;
+            }
+
+            let html = '<div class="test-result success">✅ Configuración de Supabase detectada:</div>';
+            html += `<div class="meta-tag">URL: ${url}</div>`;
+            html += `<div class="meta-tag">Anon Key: ${key.substring(0, 30)}...</div>`;
+
+            supabaseDiv.innerHTML = html;
+        }
+
+        // Mostrar estado del sistema
+        function showSystemStatus() {
+            const statusDiv = document.getElementById('systemStatus');
+
+            let html = '<div class="test-result info">📊 Estado del Sistema:</div>';
+
+            // Verificar si estamos en desarrollo
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            html += `<div class="meta-tag">Entorno: ${isDev ? 'Desarrollo' : 'Producción'}</div>`;
+
+            // Verificar servidor
+            html += `<div class="meta-tag">Servidor: ${window.location.hostname}:${window.location.port}</div>`;
+
+            // Verificar protocolo
+            html += `<div class="meta-tag">Protocolo: ${window.location.protocol}</div>`;
+
+            // Verificar variables de entorno
+            const envVarsCount = document.querySelectorAll('meta[name^="EXPO_PUBLIC_"]').length;
+            html += `<div class="meta-tag">Variables de entorno: ${envVarsCount}</div>`;
+
+            statusDiv.innerHTML = html;
+        }
+
+        // Ejecutar todas las pruebas al cargar la página
+        window.addEventListener('load', function() {
+            showEnvVars();
+            showFirebaseConfig();
+            showSupabaseConfig();
+            showSystemStatus();
+        });
+    </script>
+</body>
+</html> 

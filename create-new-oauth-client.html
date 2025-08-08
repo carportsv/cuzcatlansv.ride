@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Nuevo Cliente OAuth - Solución Definitiva</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .solution-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .step h3 {
+            color: #dc3545;
+            margin-top: 0;
+        }
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .code {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+        }
+        .important {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="solution-container">
+        <h1>🚨 SOLUCIÓN DEFINITIVA - Crear Nuevo Cliente OAuth</h1>
+        
+        <div class="warning">
+            <h2>❌ Problema Confirmado</h2>
+            <p><strong>El cliente OAuth actual está marcado como "eliminado" en el sistema de Google</strong></p>
+            <p>Error: <code>Error 401: deleted_client</code></p>
+            <p>Esto significa que Google ha eliminado internamente el cliente, aunque aparezca como "habilitado" en la interfaz.</p>
+        </div>
+
+        <div class="important">
+            <h2>🎯 Solución: Crear un NUEVO Cliente OAuth</h2>
+            <p>Necesitas crear un cliente OAuth completamente nuevo para reemplazar el que está eliminado.</p>
+        </div>
+
+        <h2>📋 Pasos para Crear el Nuevo Cliente OAuth:</h2>
+
+        <div class="step">
+            <h3>Paso 1: Ir a Google Cloud Console</h3>
+            <p>Ve a: <a href="https://console.cloud.google.com/" target="_blank">https://console.cloud.google.com/</a></p>
+            <p>Selecciona tu proyecto: <strong>taxi-zkt</strong></p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 2: Navegar a Credenciales</h3>
+            <p>En el menú lateral, ve a:</p>
+            <div class="code">APIs & Services > Credentials</div>
+        </div>
+
+        <div class="step">
+            <h3>Paso 3: Crear Nuevo Cliente OAuth</h3>
+            <ol>
+                <li>Haz clic en <strong>"+ CREATE CREDENTIALS"</strong></li>
+                <li>Selecciona <strong>"OAuth client ID"</strong></li>
+                <li>Tipo de aplicación: <strong>"Web application"</strong></li>
+                <li>Nombre: <strong>"Cuzcatlansv Ride Web App"</strong></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Paso 4: Configurar Orígenes Autorizados</h3>
+            <p>En la sección <strong>"Authorized JavaScript origins"</strong>, agrega:</p>
+            <div class="code">https://auth.expo.io
+http://localhost:8000
+http://127.0.0.1:8000
+http://localhost
+http://127.0.0.1
+https://carportsv.github.io
+https://tu-usuario.github.io</div>
+        </div>
+
+        <div class="step">
+            <h3>Paso 5: Configurar URIs de Redirección</h3>
+            <p>En la sección <strong>"Authorized redirect URIs"</strong>, agrega:</p>
+            <div class="code">https://auth.expo.io/@carposv/sv-tazkt
+http://localhost:8000
+http://127.0.0.1:8000
+http://localhost
+http://127.0.0.1
+https://carportsv.github.io
+https://tu-usuario.github.io</div>
+        </div>
+
+        <div class="step">
+            <h3>Paso 6: Crear y Copiar el Nuevo Client ID</h3>
+            <ol>
+                <li>Haz clic en <strong>"CREATE"</strong></li>
+                <li>Se generará un nuevo Client ID</li>
+                <li><strong>COPIA el nuevo Client ID</strong> (será diferente al anterior)</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Paso 7: Actualizar Firebase Authentication</h3>
+            <p>Ve a: <a href="https://console.firebase.google.com/" target="_blank">https://console.firebase.google.com/</a></p>
+            <p>Selecciona tu proyecto: <strong>taxi-zkt-7f276</strong></p>
+            <p>Ve a: <strong>Authentication > Sign-in method > Google</strong></p>
+            <p>Haz clic en <strong>"Edit"</strong></p>
+            <p>En <strong>"Web SDK configuration"</strong>, pega el nuevo Client ID</p>
+            <p>Haz clic en <strong>"Save"</strong></p>
+        </div>
+
+        <div class="success">
+            <h2>✅ Después de completar los pasos:</h2>
+            <ol>
+                <li>Recarga la aplicación: <a href="http://localhost:8000/" target="_blank">http://localhost:8000/</a></li>
+                <li>Prueba Google Sign-In</li>
+                <li>El error "deleted_client" debería desaparecer completamente</li>
+                <li>La autenticación debería funcionar correctamente</li>
+            </ol>
+        </div>
+
+        <div class="highlight">
+            <h2>⚠️ Notas Importantes:</h2>
+            <ul>
+                <li><strong>El cliente anterior está eliminado</strong> - no intentes restaurarlo</li>
+                <li><strong>El nuevo Client ID será diferente</strong> al anterior</li>
+                <li><strong>Debes actualizar Firebase</strong> con el nuevo Client ID</li>
+                <li><strong>Esto es una solución definitiva</strong> - resolverá el problema permanentemente</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Verificación Final</h3>
+            <p>Para verificar que todo funciona:</p>
+            <ul>
+                <li><a href="http://localhost:8000/debug-auth.html" target="_blank">Diagnóstico General</a></li>
+                <li><a href="http://localhost:8000/test-coop-fix.html" target="_blank">Verificación COOP</a></li>
+                <li><a href="http://localhost:8000/fix-oauth-client.html" target="_blank">Diagnóstico OAuth</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html> 

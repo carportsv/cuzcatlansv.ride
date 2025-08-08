@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Inicio de Sesión</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .config-value {
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 5px 0;
+            word-break: break-all;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .console-output {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .login-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .login-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .login-form button {
+            width: 100%;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔐 Test Inicio de Sesión</h1>
+        <p>Este archivo verifica que el inicio de sesión funcione correctamente.</p>
+
+        <div class="test-section">
+            <h2>📋 Estado de la Configuración</h2>
+            <div id="configStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Pruebas de Autenticación</h2>
+            <button onclick="testFirebaseConfig()">1. Verificar Configuración Firebase</button>
+            <button onclick="testAuthService()">2. Verificar Servicio de Auth</button>
+            <button onclick="testGoogleSignIn()">3. Probar Google Sign-In</button>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Formulario de Prueba</h2>
+            <div class="login-form">
+                <h3>Inicio de Sesión con Google</h3>
+                <button onclick="testGoogleSignIn()" style="background: #4285f4;">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" style="width: 20px; vertical-align: middle; margin-right: 10px;">
+                    Continuar con Google
+                </button>
+                
+                <h3>Inicio de Sesión con Teléfono</h3>
+                <input type="tel" id="phoneNumber" placeholder="Número de teléfono (+503XXXXXXXX)" value="+50370346370">
+                <button onclick="testPhoneSignIn()">Enviar código de verificación</button>
+                
+                <div id="verificationSection" style="display: none;">
+                    <input type="text" id="verificationCode" placeholder="Código de verificación">
+                    <button onclick="testVerifyCode()">Verificar código</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Consola de Debug</h2>
+            <div id="consoleOutput" class="console-output"></div>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // Interceptar console para mostrar en la página
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function addToConsole(message, type = 'log') {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'warn' ? '#ffd93d' : '#51cf66';
+            consoleOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+
+        let authService = null;
+
+        // Verificar estado de la configuración
+        function showConfigStatus() {
+            const configDiv = document.getElementById('configStatus');
+
+            if (typeof CONFIG === 'undefined') {
+                configDiv.innerHTML = '<div class="test-result error">❌ CONFIG no está definido</div>';
+                return false;
+            }
+
+            let html = '<div class="test-result success">✅ CONFIG cargado correctamente</div>';
+
+            // Verificar Firebase
+            if (CONFIG.FIREBASE_CONFIG) {
+                const hasApiKey = CONFIG.FIREBASE_CONFIG.apiKey && CONFIG.FIREBASE_CONFIG.apiKey.length > 0;
+                const hasAuthDomain = CONFIG.FIREBASE_CONFIG.authDomain && CONFIG.FIREBASE_CONFIG.authDomain.length > 0;
+                const hasProjectId = CONFIG.FIREBASE_CONFIG.projectId && CONFIG.FIREBASE_CONFIG.projectId.length > 0;
+
+                if (hasApiKey && hasAuthDomain && hasProjectId) {
+                    html += '<div class="config-value">✅ Firebase Config: Completo</div>';
+                } else {
+                    html += '<div class="config-value">❌ Firebase Config: Incompleto</div>';
+                    return false;
+                }
+            } else {
+                html += '<div class="config-value">❌ Firebase Config: No presente</div>';
+                return false;
+            }
+
+            // Verificar Supabase
+            if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
+                html += '<div class="config-value">✅ Supabase Config: Completo</div>';
+            } else {
+                html += '<div class="config-value">❌ Supabase Config: Incompleto</div>';
+                return false;
+            }
+
+            configDiv.innerHTML = html;
+            return true;
+        }
+
+        // Probar configuración de Firebase
+        async function testFirebaseConfig() {
+            const resultsDiv = document.getElementById('testResults');
+
+            try {
+                if (typeof firebase === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ Firebase SDK no cargado</div>';
+                    return;
+                }
+
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(CONFIG.FIREBASE_CONFIG);
+                }
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ Firebase inicializado correctamente</div>';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al inicializar Firebase: ${error.message}</div>`;
+            }
+        }
+
+        // Probar servicio de autenticación
+        async function testAuthService() {
+            const resultsDiv = document.getElementById('testResults');
+
+            try {
+                if (typeof AuthService === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ AuthService no está definido</div>';
+                    return;
+                }
+
+                authService = new AuthService();
+                await authService.init();
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ AuthService inicializado correctamente</div>';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al inicializar AuthService: ${error.message}</div>`;
+            }
+        }
+
+        // Probar Google Sign-In
+        async function testGoogleSignIn() {
+            const resultsDiv = document.getElementById('testResults');
+
+            try {
+                if (!authService) {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ AuthService no inicializado</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '<div class="test-result info">🔄 Iniciando Google Sign-In...</div>';
+
+                await authService.signInWithGoogle();
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ Google Sign-In iniciado correctamente</div>';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error en Google Sign-In: ${error.message}</div>`;
+            }
+        }
+
+        // Probar inicio de sesión con teléfono
+        async function testPhoneSignIn() {
+            const resultsDiv = document.getElementById('testResults');
+            const phoneNumber = document.getElementById('phoneNumber').value;
+
+            try {
+                if (!authService) {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ AuthService no inicializado</div>';
+                    return;
+                }
+
+                if (!phoneNumber) {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ Ingresa un número de teléfono</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '<div class="test-result info">🔄 Enviando código de verificación...</div>';
+
+                await authService.signInWithPhone(phoneNumber);
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ Código de verificación enviado</div>';
+                document.getElementById('verificationSection').style.display = 'block';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al enviar código: ${error.message}</div>`;
+            }
+        }
+
+        // Probar verificación de código
+        async function testVerifyCode() {
+            const resultsDiv = document.getElementById('testResults');
+            const code = document.getElementById('verificationCode').value;
+
+            try {
+                if (!authService) {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ AuthService no inicializado</div>';
+                    return;
+                }
+
+                if (!code) {
+                    resultsDiv.innerHTML = '<div class="test-result error">❌ Ingresa el código de verificación</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '<div class="test-result info">🔄 Verificando código...</div>';
+
+                await authService.verifyPhoneCode(code);
+
+                resultsDiv.innerHTML = '<div class="test-result success">✅ Código verificado correctamente</div>';
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">❌ Error al verificar código: ${error.message}</div>`;
+            }
+        }
+
+        // Ejecutar pruebas iniciales
+        window.addEventListener('load', function() {
+            console.log('🚀 Iniciando pruebas de autenticación...');
+            showConfigStatus();
+        });
+    </script>
+</body>
+</html> 

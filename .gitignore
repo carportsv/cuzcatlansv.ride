@@ -1,0 +1,21 @@
+
+# Archivos sensibles que NO deben subirse
+.env
+.env.local
+.env.development
+.env.production
+env-server.py
+*.pyc
+__pycache__/
+
+# Archivos de desarrollo
+node_modules/
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Archivos temporales
+*.tmp
+*.temp
