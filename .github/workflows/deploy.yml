@@ -19,15 +19,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        
     - name: Replace secrets in config.js
       run: |
         echo "🔐 Reemplazando placeholders en config.js..."
-        # Reemplazar placeholders con secrets en config.js (compatible con Linux)
+        # Reemplazar placeholders con secrets en config.js
         sed -i 's|{{FIREBASE_API_KEY}}|${{ secrets.FIREBASE_API_KEY }}|g' js/config.js
         sed -i 's|{{FIREBASE_AUTH_DOMAIN}}|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g' js/config.js
         sed -i 's|{{FIREBASE_PROJECT_ID}}|${{ secrets.FIREBASE_PROJECT_ID }}|g' js/config.js
@@ -41,7 +36,7 @@ jobs:
     - name: Replace secrets in index.html
       run: |
         echo "🔐 Reemplazando placeholders en index.html..."
-        # Reemplazar placeholders con secrets en index.html (compatible con Linux)
+        # Reemplazar placeholders con secrets en index.html
         sed -i 's|{{FIREBASE_API_KEY}}|${{ secrets.FIREBASE_API_KEY }}|g' index.html
         sed -i 's|{{FIREBASE_AUTH_DOMAIN}}|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g' index.html
         sed -i 's|{{FIREBASE_PROJECT_ID}}|${{ secrets.FIREBASE_PROJECT_ID }}|g' index.html
@@ -52,9 +47,14 @@ jobs:
         sed -i 's|{{SUPABASE_ANON_KEY}}|${{ secrets.SUPABASE_ANON_KEY }}|g' index.html
         echo "✅ Placeholders reemplazados en index.html"
         
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: .
-        publish_branch: gh-pages
+        path: .
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
