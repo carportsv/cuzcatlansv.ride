@@ -430,4 +430,8 @@ class ApiService {
 }
 
 // Crear instancia global del servicio API
-const apiService = new ApiService(); 
+const apiService = new ApiService();
+
+// Exponer globalmente para uso en otras páginas
+window.apiService = apiService;
+console.log('✅ ApiService expuesto globalmente'); 
