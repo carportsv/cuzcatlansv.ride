@@ -51,6 +51,13 @@ const CONFIG = {
         EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         PHONE_REGEX: /^[\+]?[1-9][\d]{0,15}$/,
         PASSWORD_MIN_LENGTH: 6
+    },
+    // Claves de almacenamiento local
+    STORAGE_KEYS: {
+        USER_DATA: 'user_data',
+        USER_TOKEN: 'user_token',
+        USER_UID: 'user_uid',
+        USER_ROLE: 'user_role'
     }
 };
 
