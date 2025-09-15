@@ -35,6 +35,26 @@ web-html/
 ├── assets/
 │   ├── images/             # Imágenes
 │   └── icons/              # Iconos
+├── config.env.json         # (Opcional) Claves inyectadas desde .env raíz
+├── debug/                  # (Nuevo) Páginas de diagnóstico y pruebas
+│   ├── debug-auth.html
+│   ├── debug-connection.html
+│   ├── test-auth.html
+│   ├── test-auth-config.html
+│   ├── test-env-injection.html
+│   ├── test-signin.html
+│   ├── test-coop-fix.html
+│   ├── test-csp-fix.html
+│   ├── fix-firebase-domain.html
+│   ├── fix-oauth-client.html
+│   ├── fix-redirect-uri.html
+│   ├── oauth-config-fix.html
+│   └── oauth-fix-steps.html
+├── dev/                    # (Nuevo) Scripts para levantar servidor local
+│   ├── dev-server.js
+│   ├── start-dev.js
+│   ├── simple-server.py
+│   └── simple-https-server.py
 └── README.md               # Este archivo
 ```
 
@@ -50,7 +70,7 @@ FIREBASE_CONFIG: {
     authDomain: "tu-proyecto.firebaseapp.com",
     projectId: "tu-proyecto-id",
     storageBucket: "tu-proyecto.appspot.com",
-    messagingSenderId: "123456789",
+    messagingSenderId: "{{FIREBASE_MESSAGING_SENDER_ID}}",
     appId: "tu-app-id"
 }
 ```
@@ -80,18 +100,18 @@ DEFAULT_LNG: -89.2182,
 1. **Instalar un servidor HTTP local:**
    ```bash
    # Con Python 3
-   python -m http.server 8000
+   python -m http.server 3000
    
    # Con Node.js (npx)
-   npx http-server -p 8000
+   npx http-server -p 3000
    
    # Con PHP
-   php -S localhost:8000
+   php -S localhost:3000
    ```
 
 2. **Abrir en el navegador:**
    ```
-   http://localhost:8000
+   http://localhost:3000
    ```
 
 ### Opción 2: Servidor de Desarrollo
@@ -103,10 +123,25 @@ DEFAULT_LNG: -89.2182,
 
 2. **Ejecutar servidor de desarrollo:**
    ```bash
-   live-server --port=8000
+   live-server --port=3000
    ```
 
-### Opción 3: Despliegue en Producción
+### Opción 3: Servidores incluidos en web-html/dev
+
+Desde `web-html/dev/`:
+
+```bash
+# Node (hot-reload simple)
+node start-dev.js
+
+# Python HTTP
+python simple-server.py
+
+# Python HTTPS (autofirmado)
+python simple-https-server.py
+```
+
+### Opción 4: Despliegue en Producción
 
 1. **Subir archivos a tu servidor web**
 2. **Configurar HTTPS** (requerido para geolocalización)

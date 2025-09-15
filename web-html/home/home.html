@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cuzcatlansv.ride - Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        /* Ocultar scrollbar pero mantener funcionalidad */
+        body::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        body::-webkit-scrollbar-thumb {
+            background: transparent;
+        }
+        
+        /* Ocultar scrollbar en todos los elementos */
+        * {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        *::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .admin-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header limpio y profesional */
+        .admin-header {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            text-align: center;
+        }
+        
+        /* Forzar estilos del header */
+        .admin-header * {
+            color: #1f2937 !important;
+        }
+        
+        .admin-header .admin-subtitle {
+            color: #374151 !important;
+        }
+
+        .admin-header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            gap: 1rem;
+        }
+
+        .admin-header-icon {
+            font-size: 28px;
+            color: #1f2937 !important;
+        }
+
+        .admin-title {
+            color: #1f2937 !important;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .admin-subtitle {
+            color: #374151 !important;
+            font-size: 14px;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+
+        /* Main Content - igual que gestión de viajes */
+        .admin-main {
+            flex: 1;
+            padding: 20px 20px 0px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Stats Dashboard - igual que gestión de viajes */
+        .stats-dashboard {
+            margin-bottom: 0;
+        }
+
+        /* Management Screen - contenedor glassmorphism para fondo blanco */
+        .management-screen {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            padding: 1rem 1rem 0.5rem 1rem;
+            margin-top: 0.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            height: fit-content;
+            min-height: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, auto);
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+            height: fit-content;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 0.75rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-height: 90px;
+            height: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #3b82f6;
+        }
+
+        .stat-card.clickable {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #1f2937;
+            padding: 1.5rem;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-align: left;
+            min-height: 120px;
+            height: 100%;
+        }
+
+        .stat-card.clickable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #3b82f6;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #1f2937;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .stat-icon i {
+            font-size: 24px;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-content h3 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827 !important;
+        }
+
+        .stat-content p {
+            margin: 0;
+            color: #374151 !important;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Estilos especiales para logout */
+        .stat-card.logout .stat-icon {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            border-color: rgba(255, 107, 107, 0.2);
+        }
+
+        .stat-card.logout .stat-content h3 {
+            color: #ff6b6b;
+        }
+
+        .stat-card.logout .stat-content p {
+            color: rgba(255, 107, 107, 0.8) !important;
+        }
+        
+        /* Forzar texto oscuro en todas las tarjetas */
+        .stat-card .stat-content h3,
+        .stat-card .stat-content p {
+            color: #111827 !important;
+        }
+        
+        .stat-card .stat-content p {
+            color: #374151 !important;
+        }
+        
+        .stat-card.logout .stat-content h3 {
+            color: #ff6b6b !important;
+        }
+        
+        .stat-card.logout .stat-content p {
+            color: rgba(255, 107, 107, 0.8) !important;
+        }
+
+        /* ===== RESPONSIVE DESIGN PARA GRID 3x2 ===== */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr) !important;
+                grid-template-rows: repeat(2, 1fr) !important;
+                gap: 1rem !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: repeat(3, 1fr) !important;
+                gap: 1rem !important;
+                padding-left: 0 !important;
+            }
+            
+            .stats-grid::before {
+                display: none !important;
+            }
+            
+            .stat-card::before {
+                display: none !important;
+            }
+            
+            .stat-card {
+                padding: 1rem !important;
+            }
+            
+            .admin-header {
+                padding: 1rem;
+            }
+            
+            .admin-title {
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                grid-template-rows: repeat(6, 1fr) !important;
+                gap: 0.75rem !important;
+                padding-left: 0 !important;
+            }
+            
+            .stats-grid::before {
+                display: none !important;
+            }
+            
+            .stat-card::before {
+                display: none !important;
+            }
+            
+            .stat-card {
+                padding: 1rem !important;
+            }
+        }
+
+        .admin-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .admin-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: #2563EB;
+        }
+
+        .admin-menu-item:hover {
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+        .admin-menu-item-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+
+        .admin-menu-text {
+            flex: 1;
+        }
+
+        .admin-menu-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 2px;
+        }
+
+        .admin-menu-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .admin-menu-arrow {
+            font-size: 24px;
+            color: #9ca3af;
+        }
+
+        /* Estilos especiales para logout */
+        .admin-card.logout .admin-menu-icon {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.2);
+        }
+
+        .admin-card.logout .admin-menu-title {
+            color: #ff6b6b;
+        }
+
+        .admin-card.logout .admin-menu-subtitle {
+            color: rgba(255, 107, 107, 0.8);
+        }
+
+        /* Grid layout como en gestión de viajes */
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        /* Cards como en gestión de viajes - glassmorphism */
+        .admin-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Efecto shimmer para las tarjetas */
+        .admin-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+            pointer-events: none;
+        }
+
+        .admin-card:hover::before {
+            left: 100%;
+        }
+
+        .admin-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Iconos como en gestión de viajes */
+        .admin-menu-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            color: #2563EB;
+        }
+
+        /* Contenido como en gestión de viajes */
+        .admin-menu-text {
+            width: 100%;
+        }
+
+        .admin-menu-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .admin-menu-subtitle {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #374151;
+            margin-bottom: 1rem;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+        }
+
+        /* Eliminar elementos no necesarios */
+        .admin-menu-item-left,
+        .admin-menu-arrow {
+            display: none;
+        }
+
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-content {
+                padding: 12px;
+            }
+            
+            .admin-header {
+                padding: 30px 16px 16px 16px;
+            }
+            
+            .admin-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header como en la app móvil -->
+        <div class="admin-header">
+            <div class="admin-header-content">
+                <i class="fas fa-car admin-header-icon"></i>
+                <div class="admin-title">cuzcatlansv.ride</div>
+            </div>
+            <div class="admin-subtitle">Panel de Administrador</div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Stats Dashboard - Clickable Navigation -->
+            <section class="stats-dashboard">
+                <div class="management-screen">
+                    <div class="stats-grid">
+                <!-- Gestión de Viajes -->
+                <button class="stat-card clickable" onclick="window.location.href='../ride-management/ride-management.html'">
+                    <div class="stat-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Gestión de Viajes</h3>
+                        <p>Solicitudes, aceptados, historial y disponibilidad</p>
+                    </div>
+                </button>
+
+                <!-- Conductores -->
+                <button class="stat-card clickable" onclick="window.location.href='../drivers/drivers.html'">
+                    <div class="stat-icon">
+                        <i class="fas fa-taxi"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Conductores</h3>
+                        <p>Gestionar conductores y vehículos</p>
+                    </div>
+                </button>
+
+                <!-- Reportes -->
+                <button class="stat-card clickable" onclick="window.location.href='../reports/reports.html'">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Reportes</h3>
+                        <p>Estadísticas y análisis de viajes</p>
+                    </div>
+                </button>
+
+                <!-- Configuración -->
+                <button class="stat-card clickable" onclick="window.location.href='../configuration/configuration.html'">
+                    <div class="stat-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Configuración</h3>
+                        <p>Ajustar preferencias del sistema</p>
+                    </div>
+                </button>
+
+                <!-- Probar Notificación -->
+                <button class="stat-card clickable" onclick="testNotification()">
+                    <div class="stat-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Probar Notificación</h3>
+                        <p>Probar sistema de notificaciones</p>
+                    </div>
+                </button>
+
+                <!-- Cerrar Sesión -->
+                <button class="stat-card clickable logout" onclick="handleLogout()">
+                    <div class="stat-icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Cerrar Sesión</h3>
+                        <p>Salir del panel de administración</p>
+                    </div>
+                </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts de la aplicación -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/shared-utils.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/admin.js"></script>
+    
+    <script>
+        // Función para probar notificaciones
+        function testNotification() {
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification('Test de Notificación', {
+                        body: 'Esta es una notificación de prueba del sistema',
+                        icon: 'favicon.svg'
+                    });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification('Test de Notificación', {
+                                body: 'Esta es una notificación de prueba del sistema',
+                                icon: 'favicon.svg'
+                            });
+                        }
+                    });
+                }
+            } else {
+                alert('Las notificaciones no están soportadas en este navegador');
+            }
+        }
+
+        // Función para cerrar sesión
+        function handleLogout() {
+            if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+                // Aquí iría la lógica de logout
+                window.location.href = '../auth/login.html';
+            }
+        }
+
+
+        // Inicialización cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Home admin cargado correctamente');
+            
+            // Verificar si hay un servicio de autenticación disponible
+            if (typeof window.authService !== 'undefined') {
+                console.log('✅ authService disponible');
+            } else {
+                console.log('⚠️ authService no disponible');
+            }
+            
+            console.log('✅ Menú admin mostrado');
+        });
+    </script>
+</body>
+</html>

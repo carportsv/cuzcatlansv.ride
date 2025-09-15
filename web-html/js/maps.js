@@ -13,15 +13,24 @@ class MapsService {
     // Inicializar el servicio de mapas
     async init() {
         try {
-            // Verificar si Leaflet está cargado
+            // Esperar a que Leaflet esté disponible
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            while (typeof L === 'undefined' && attempts < maxAttempts) {
+                console.log(`🔄 Esperando Leaflet... Intento ${attempts + 1}/${maxAttempts}`);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                attempts++;
+            }
+            
             if (typeof L === 'undefined') {
-                console.error('Leaflet no está cargado');
+                console.warn('⚠️ Leaflet no está disponible después de esperar, el servicio se inicializará cuando esté disponible');
                 return;
             }
 
-            console.log('Servicio de mapas inicializado');
+            console.log('✅ Servicio de mapas inicializado');
         } catch (error) {
-            console.error('Error inicializando servicio de mapas:', error);
+            console.error('❌ Error inicializando servicio de mapas:', error);
         }
     }
 
@@ -385,7 +394,7 @@ class MapsService {
 
         this.route = L.geoJSON(geometry, {
             style: {
-                color: CONFIG.PRIMARY_COLOR,
+                color: CONFIG.PRIMARY_COLOR || '#4CAF50',
                 weight: 4,
                 opacity: 0.8
             }
@@ -393,6 +402,15 @@ class MapsService {
 
         // Ajustar vista para mostrar toda la ruta
         this.map.fitBounds(this.route.getBounds(), { padding: [20, 20] });
+    }
+    
+    // Limpiar ruta del mapa
+    clearRoute() {
+        if (this.route) {
+            this.map.removeLayer(this.route);
+            this.route = null;
+            console.log('🗺️ Route cleared from map');
+        }
     }
 
     // ===== GESTIÓN DE MARCADORES =====
@@ -522,4 +540,21 @@ class MapsService {
 }
 
 // Crear instancia global del servicio de mapas
-const mapsService = new MapsService(); 
+const mapsService = new MapsService();
+
+// Exponer globalmente
+window.mapsService = mapsService;
+
+// Inicializar cuando Leaflet esté disponible
+function initializeMapsService() {
+    if (typeof L !== 'undefined') {
+        console.log('🗺️ Leaflet disponible, inicializando servicio de mapas...');
+        mapsService.init();
+    } else {
+        console.log('⏳ Leaflet no disponible, esperando...');
+        setTimeout(initializeMapsService, 100);
+    }
+}
+
+// Iniciar la inicialización
+initializeMapsService(); 

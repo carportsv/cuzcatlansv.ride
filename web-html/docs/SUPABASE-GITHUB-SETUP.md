@@ -41,7 +41,7 @@ Supabase es una base de datos en la nube, por lo que funciona desde cualquier do
 AUTHORIZED_DOMAINS: [
     'localhost:8000',
     '127.0.0.1:8000',
-    'taxi-zkt-7f276.firebaseapp.com',
+    '{{FIREBASE_AUTH_DOMAIN}}',
     'tu-usuario.github.io',  // ← Agregar aquí tu dominio
 ],
 ```
@@ -62,7 +62,7 @@ AUTHORIZED_DOMAINS: [
 ### **Test 1: Conexión a Supabase**
 ```javascript
 // En la consola del navegador
-fetch('https://wpecvlperiberbmsndlg.supabase.co/rest/v1/users?select=*', {
+fetch('{{SUPABASE_URL}}/rest/v1/users?select=*', {
     headers: {
         'apikey': 'tu-supabase-anon-key',
         'Authorization': 'Bearer tu-supabase-anon-key'

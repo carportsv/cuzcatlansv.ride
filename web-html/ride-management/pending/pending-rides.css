@@ -1,0 +1,39 @@
+/* Pending Rides - Estilos específicos para viajes pendientes */
+
+/* Estilos específicos que no están en los archivos CSS compartidos */
+.pending-rides .ride-card {
+    border-left: 4px solid #FF9800;
+}
+
+.pending-rides .ride-status.pending {
+    background: linear-gradient(135deg, #FF9800, #F44336);
+}
+
+.priority-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.priority-badge.priority-high {
+    background: linear-gradient(135deg, #FF9800, #F44336);
+    color: #ffffff;
+}
+
+.priority-badge.priority-urgent {
+    background: linear-gradient(135deg, #F44336, #D32F2F);
+    color: #ffffff;
+}
+
+.pending-badge {
+    background: linear-gradient(135deg, #FF9800, #F44336);
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 15px rgba(255, 217, 61, 0.3);
+}

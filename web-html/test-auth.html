@@ -3,300 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Auth - Cuzcatlansv.ride</title>
+    <title>Test de Autenticación</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .test-container {
-            background: white;
-            padding: 20px;
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            max-width: 500px;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            font-weight: bold;
         }
-        .test-button {
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+        button {
             background: #007bff;
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 5px;
             cursor: pointer;
-            margin: 5px;
+            margin: 10px;
         }
-        .test-button:hover {
-            background: #0056b3;
-        }
-        .log-container {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 2px 0;
-        }
-        .log-success { color: #28a745; }
-        .log-error { color: #dc3545; }
-        .log-warning { color: #ffc107; }
-        .log-info { color: #17a2b8; }
+        button:hover { background: #0056b3; }
     </style>
-    
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 </head>
 <body>
-    <h1>🧪 Test de Autenticación - Cuzcatlansv.ride</h1>
-    
-    <div class="test-container">
-        <h2>Configuración</h2>
-        <button class="test-button" onclick="testConfig()">Test Configuración</button>
-        <button class="test-button" onclick="testFirebase()">Test Firebase</button>
-        <button class="test-button" onclick="testLocalStorage()">Test LocalStorage</button>
-    </div>
-    
-    <div class="test-container">
-        <h2>Autenticación</h2>
-        <button class="test-button" onclick="testPhoneAuth()">Test Phone Auth</button>
-        <button class="test-button" onclick="testGoogleAuth()">Test Google Auth</button>
-        <button class="test-button" onclick="clearAuth()">Limpiar Auth</button>
-    </div>
-    
-    <div class="test-container">
-        <h2>Estado Actual</h2>
-        <div id="currentState">Cargando...</div>
-    </div>
-    
-    <div class="test-container">
-        <h2>Logs</h2>
-        <button class="test-button" onclick="clearLogs()">Limpiar Logs</button>
-        <div id="logContainer" class="log-container"></div>
+    <div class="container">
+        <h1>🔐 Test de Autenticación</h1>
+        
+        <div id="status" class="status info">
+            Verificando estado de autenticación...
+        </div>
+        
+        <div id="userInfo" style="display: none;">
+            <h3>Información del Usuario</h3>
+            <div id="userDetails"></div>
+        </div>
+        
+        <div id="actions">
+            <button onclick="checkAuth()">🔄 Verificar Autenticación</button>
+            <button onclick="goToLogin()">🔑 Ir al Login</button>
+            <button onclick="goToHome()">🏠 Ir a Home</button>
+            <button onclick="testProtectedPages()">🧪 Probar Páginas Protegidas</button>
+        </div>
+        
+        <div id="testResults" style="margin-top: 20px;"></div>
     </div>
 
-    <script src="js/config.js"></script>
     <script>
-        // Configuración de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyAJfonmq_9roRuSP3y9UXXEJHRxD3DhcNQ",
-            authDomain: "taxi-zkt-7f276.firebaseapp.com",
-            projectId: "taxi-zkt-7f276",
-            storageBucket: "taxi-zkt-7f276.appspot.com",
-            messagingSenderId: "570692523770",
-            appId: "1:570692523770:web:26e5ad5e0c0ded43331b43"
-        };
-
-        let auth = null;
-        let currentUser = null;
-
-        // Función para agregar logs
-        function addLog(message, type = 'info') {
-            const logContainer = document.getElementById('logContainer');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${type}`;
-            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-
-        // Función para limpiar logs
-        function clearLogs() {
-            document.getElementById('logContainer').innerHTML = '';
-        }
-
-        // Test de configuración
-        function testConfig() {
-            addLog('🔧 Probando configuración...', 'info');
-            addLog(`Firebase Config: ${JSON.stringify(firebaseConfig)}`, 'info');
-            addLog(`CONFIG: ${JSON.stringify(CONFIG)}`, 'info');
-            addLog('✅ Configuración cargada', 'success');
-        }
-
-        // Test de Firebase
-        function testFirebase() {
-            addLog('🔥 Probando Firebase...', 'info');
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
-                    addLog('✅ Firebase inicializado', 'success');
-                } else {
-                    addLog('✅ Firebase ya estaba inicializado', 'success');
-                }
-                
-                auth = firebase.auth();
-                addLog('✅ Firebase Auth obtenido', 'success');
-                
-                // Configurar listener de estado de autenticación
-                auth.onAuthStateChanged((user) => {
-                    currentUser = user;
-                    addLog(`👤 Estado de autenticación cambiado: ${user ? 'Autenticado' : 'No autenticado'}`, 'info');
-                    if (user) {
-                        addLog(`📱 Usuario: ${user.phoneNumber || user.email}`, 'success');
-                    }
-                    updateCurrentState();
-                });
-                
-            } catch (error) {
-                addLog(`❌ Error en Firebase: ${error.message}`, 'error');
-            }
-        }
-
-        // Test de LocalStorage
-        function testLocalStorage() {
-            addLog('💾 Probando LocalStorage...', 'info');
-            try {
-                const keys = ['userUID', 'userRole', 'userData', 'userToken'];
-                keys.forEach(key => {
-                    const value = localStorage.getItem(key);
-                    addLog(`${key}: ${value || 'null'}`, 'info');
-                });
-                addLog('✅ LocalStorage verificado', 'success');
-            } catch (error) {
-                addLog(`❌ Error en LocalStorage: ${error.message}`, 'error');
-            }
-        }
-
-        // Test de autenticación por teléfono
-        async function testPhoneAuth() {
-            addLog('📱 Probando autenticación por teléfono...', 'info');
-            
-            if (!auth) {
-                addLog('❌ Firebase Auth no inicializado', 'error');
-                return;
-            }
-
-            try {
-                // Simular número de teléfono para prueba
-                const phoneNumber = '+50312345678';
-                addLog(`📞 Usando número: ${phoneNumber}`, 'info');
-                
-                // Crear reCAPTCHA verifier
-                const recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-                    'size': 'normal',
-                    'callback': (response) => {
-                        addLog('✅ reCAPTCHA completado', 'success');
-                    },
-                    'expired-callback': () => {
-                        addLog('⚠️ reCAPTCHA expirado', 'warning');
-                    }
-                }, firebase.app());
-                
-                addLog('🔧 reCAPTCHA verifier creado', 'info');
-                
-                // Enviar código de verificación
-                const confirmation = await auth.signInWithPhoneNumber(phoneNumber, recaptchaVerifier);
-                addLog('✅ Código de verificación enviado', 'success');
-                
-                // Simular código de verificación
-                const code = '123456';
-                addLog(`🔐 Verificando código: ${code}`, 'info');
-                
-                const result = await confirmation.confirm(code);
-                addLog('✅ Código verificado exitosamente', 'success');
-                addLog(`👤 Usuario autenticado: ${result.user.phoneNumber}`, 'success');
-                
-            } catch (error) {
-                addLog(`❌ Error en autenticación por teléfono: ${error.message}`, 'error');
-            }
-        }
-
-        // Test de autenticación con Google
-        async function testGoogleAuth() {
-            addLog('🔍 Probando autenticación con Google...', 'info');
-            
-            if (!auth) {
-                addLog('❌ Firebase Auth no inicializado', 'error');
-                return;
-            }
-
-            try {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                addLog('🔧 Proveedor de Google creado', 'info');
-                
-                const result = await auth.signInWithPopup(provider);
-                addLog('✅ Autenticación con Google exitosa', 'success');
-                addLog(`👤 Usuario: ${result.user.email}`, 'success');
-                
-            } catch (error) {
-                addLog(`❌ Error en autenticación con Google: ${error.message}`, 'error');
-            }
-        }
-
-        // Limpiar autenticación
-        async function clearAuth() {
-            addLog('🧹 Limpiando autenticación...', 'info');
-            
-            try {
-                if (auth) {
-                    await auth.signOut();
-                    addLog('✅ Sesión cerrada', 'success');
-                }
-                
-                // Limpiar localStorage
-                localStorage.removeItem('userUID');
-                localStorage.removeItem('userRole');
-                localStorage.removeItem('userData');
-                localStorage.removeItem('userToken');
-                addLog('✅ LocalStorage limpiado', 'success');
-                
-                updateCurrentState();
-                
-            } catch (error) {
-                addLog(`❌ Error limpiando autenticación: ${error.message}`, 'error');
-            }
-        }
-
-        // Actualizar estado actual
-        function updateCurrentState() {
-            const stateDiv = document.getElementById('currentState');
-            let state = '';
-            
-            if (currentUser) {
-                state += `<p><strong>Usuario Autenticado:</strong></p>`;
-                state += `<p>📱 Teléfono: ${currentUser.phoneNumber || 'N/A'}</p>`;
-                state += `<p>📧 Email: ${currentUser.email || 'N/A'}</p>`;
-                state += `<p>🆔 UID: ${currentUser.uid}</p>`;
-            } else {
-                state += `<p><strong>No autenticado</strong></p>`;
-            }
+        // Verificar autenticación al cargar
+        window.addEventListener('load', checkAuth);
+        
+        function checkAuth() {
+            const statusDiv = document.getElementById('status');
+            const userInfoDiv = document.getElementById('userInfo');
+            const userDetailsDiv = document.getElementById('userDetails');
             
             // Verificar localStorage
-            const userData = localStorage.getItem('userData');
-            if (userData) {
+            const userData = localStorage.getItem('USER_DATA');
+            const userRole = localStorage.getItem('USER_ROLE');
+            const userUid = localStorage.getItem('USER_UID');
+            
+            // Verificar cookies
+            const cookies = document.cookie.split(';');
+            const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth_token='));
+            
+            if (userData && userRole && userUid) {
+                const user = JSON.parse(userData);
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ Usuario AUTENTICADO';
+                
+                userInfoDiv.style.display = 'block';
+                userDetailsDiv.innerHTML = `
+                    <p><strong>UID:</strong> ${user.uid}</p>
+                    <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                    <p><strong>Nombre:</strong> ${user.displayName || 'N/A'}</p>
+                    <p><strong>Rol:</strong> ${user.role}</p>
+                    <p><strong>Cookie:</strong> ${authCookie ? '✅ Presente' : '❌ Ausente'}</p>
+                `;
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '❌ Usuario NO AUTENTICADO';
+                userInfoDiv.style.display = 'none';
+            }
+        }
+        
+        function goToLogin() {
+            window.location.href = '/login.html';
+        }
+        
+        function goToHome() {
+            window.location.href = '/home.html';
+        }
+        
+        async function testProtectedPages() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<h3>🧪 Resultados de Pruebas:</h3>';
+            
+            const pages = [
+                '/home.html',
+                '/drivers/drivers.html',
+                '/ride-management/ride-management.html',
+                '/reports/reports.html',
+                '/configuration/configuration.html',
+                '/create-ride/create-ride.html'
+            ];
+            
+            for (const page of pages) {
                 try {
-                    const user = JSON.parse(userData);
-                    state += `<p><strong>LocalStorage:</strong></p>`;
-                    state += `<p>📱 Teléfono: ${user.phoneNumber || 'N/A'}</p>`;
-                    state += `<p>👤 Rol: ${user.role || 'N/A'}</p>`;
-                } catch (e) {
-                    state += `<p>❌ Error parseando localStorage</p>`;
+                    const response = await fetch(page, { method: 'HEAD' });
+                    const status = response.status;
+                    const redirected = response.redirected;
+                    
+                    let result = '';
+                    if (status === 200 && !redirected) {
+                        result = `✅ ${page} - Acceso permitido`;
+                    } else if (status === 302 || redirected) {
+                        result = `🔄 ${page} - Redirigido a login`;
+                    } else {
+                        result = `❌ ${page} - Error ${status}`;
+                    }
+                    
+                    resultsDiv.innerHTML += `<p>${result}</p>`;
+                } catch (error) {
+                    resultsDiv.innerHTML += `<p>❌ ${page} - Error: ${error.message}</p>`;
                 }
             }
-            
-            stateDiv.innerHTML = state;
         }
-
-        // Inicializar al cargar la página
-        window.onload = function() {
-            addLog('🚀 Página cargada', 'info');
-            testConfig();
-            testFirebase();
-            testLocalStorage();
-            updateCurrentState();
-        };
     </script>
-    
-    <!-- Contenedor para reCAPTCHA -->
-    <div id="recaptcha-container"></div>
 </body>
-</html> 
+</html>

@@ -22,12 +22,22 @@ class AuthService {
             }
             
             // Cargar Firebase si no está cargado
+            console.log('📦 Iniciando carga de Firebase...');
             await this.loadFirebase();
+            console.log('✅ Firebase cargado exitosamente');
+            
+            // Verificar que firebase esté disponible
+            if (typeof firebase === 'undefined') {
+                throw new Error('Firebase no está disponible después de la carga');
+            }
             
             // Inicializar Firebase si no está inicializado
             if (!firebase.apps.length) {
+                console.log('🔧 Configurando Firebase App...');
                 firebase.initializeApp(CONFIG.FIREBASE_CONFIG);
-                console.log('✅ Firebase inicializado');
+                console.log('✅ Firebase App inicializado');
+            } else {
+                console.log('✅ Firebase App ya está inicializado');
             }
             
             // Obtener instancia de Auth
@@ -55,19 +65,70 @@ class AuthService {
                 console.warn('⚠️ Error al obtener resultado del redirect:', redirectError);
                 // No es crítico, continuar con la inicialización
             }
+
+            // Verificar si el usuario llegó por un link de email
+            try {
+                const emailResult = await this.verifyEmailLink();
+                if (emailResult.success) {
+                    console.log('✅ Usuario autenticado por email link:', emailResult.user);
+                    await this.saveUserToLocalStorage(emailResult.user);
+                    this.currentUser = emailResult.user;
+                } else if (emailResult.error) {
+                    // Solo mostrar warning si no es un error de cancelación o email inválido
+                    if (!emailResult.error.includes('canceló') && !emailResult.error.includes('no válido')) {
+                        console.warn('⚠️ Error al verificar email link:', emailResult.error);
+                    } else {
+                        console.log('ℹ️ Verificación de email link omitida:', emailResult.error);
+                    }
+                }
+            } catch (emailError) {
+                console.warn('⚠️ Error al verificar email link:', emailError);
+                // No es crítico, continuar con la inicialización
+            }
             
             // Configurar listener de estado de autenticación (solo una vez)
             if (!this.authStateListenerSet) {
-                this.auth.onAuthStateChanged((user) => {
+                this.auth.onAuthStateChanged(async (user) => {
                     console.log('✅ Usuario autenticado:', user);
                     
                     if (user) {
                         // Usuario está autenticado
-                        this.saveUserToLocalStorage(user);
+                        console.log('🔐 Usuario autenticado, guardando en localStorage...');
+                        
+                        // 🔄 SINCRONIZAR CON SUPABASE
+                        try {
+                            console.log('🔄 Sincronizando usuario con Supabase...');
+                            await this.createUserProfile(user, {
+                                displayName: user.displayName,
+                                email: user.email,
+                                phoneNumber: user.phoneNumber,
+                                photoURL: user.photoURL
+                            });
+                            console.log('✅ Usuario sincronizado con Supabase exitosamente');
+                        } catch (syncError) {
+                            console.warn('⚠️ Error sincronizando con Supabase (no crítico):', syncError.message);
+                        }
+                        
+                        await this.saveUserToLocalStorage(user);
+                        this.currentUser = user;
+                        
+                        // 🔥 NOTIFICAR A LA APLICACIÓN
+                        console.log('📢 Notificando cambio de estado a la aplicación...');
+                        this.notifyAuthStateChange(true, user);
                     } else {
                         // Usuario no está autenticado
-                        console.log('ℹ️ Usuario no autenticado');
-                        this.clearUserFromLocalStorage();
+                        // Verificar si realmente no hay usuario en localStorage antes de limpiar
+                        const storedUser = this.getUserFromLocalStorage();
+                        if (!storedUser) {
+                            console.log('ℹ️ Usuario no autenticado, limpiando localStorage...');
+                            this.clearUserFromLocalStorage();
+                        } else {
+                            console.log('⚠️ Usuario en localStorage pero no en Firebase, manteniendo estado...');
+                        }
+                        
+                        // 🔥 NOTIFICAR A LA APLICACIÓN
+                        console.log('📢 Notificando cambio de estado a la aplicación...');
+                        this.notifyAuthStateChange(false, null);
                     }
                 });
                 this.authStateListenerSet = true;
@@ -93,25 +154,68 @@ class AuthService {
             
             console.log('📦 Cargando Firebase desde CDN...');
             
-            // Cargar Firebase App
+            // Cargar Firebase App desde CDN principal
             const appScript = document.createElement('script');
             appScript.src = 'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js';
             appScript.onload = () => {
                 console.log('✅ Firebase App cargado');
-                
-                // Cargar Firebase Auth
-                const authScript = document.createElement('script');
-                authScript.src = 'https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js';
-                authScript.onload = () => {
-                    console.log('✅ Firebase Auth cargado');
-                    resolve();
-                };
-                authScript.onerror = reject;
-                document.head.appendChild(authScript);
+                this.loadFirebaseAuth(resolve, reject);
             };
-            appScript.onerror = reject;
+            appScript.onerror = (error) => {
+                console.error('❌ Error cargando Firebase App desde CDN principal:', error);
+                console.log('🔄 Intentando CDN alternativo...');
+                
+                // Intentar CDN alternativo
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://cdn.jsdelivr.net/npm/firebase@8.10.0/dist/firebase-app.js';
+                fallbackScript.onload = () => {
+                    console.log('✅ Firebase App cargado desde CDN alternativo');
+                    this.loadFirebaseAuth(resolve, reject);
+                };
+                fallbackScript.onerror = (fallbackError) => {
+                    console.error('❌ Error cargando Firebase App desde CDN alternativo:', fallbackError);
+                    reject(new Error('Error cargando Firebase App desde ambos CDNs'));
+                };
+                document.head.appendChild(fallbackScript);
+                return;
+            };
             document.head.appendChild(appScript);
+            
+            // Timeout de seguridad
+            setTimeout(() => {
+                console.error('⏰ Timeout cargando Firebase desde CDN');
+                reject(new Error('Timeout cargando Firebase desde CDN (30s)'));
+            }, 15000); // 15 segundos
         });
+    }
+    
+    // Cargar Firebase Auth (función auxiliar)
+    loadFirebaseAuth(resolve, reject) {
+        // Cargar Firebase Auth
+        const authScript = document.createElement('script');
+        authScript.src = 'https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js';
+        authScript.onload = () => {
+            console.log('✅ Firebase Auth cargado');
+            resolve();
+        };
+        authScript.onerror = (error) => {
+            console.error('❌ Error cargando Firebase Auth desde CDN principal:', error);
+            console.log('🔄 Intentando CDN alternativo para Auth...');
+            
+            // Intentar CDN alternativo para Auth
+            const fallbackAuthScript = document.createElement('script');
+            fallbackAuthScript.src = 'https://cdn.jsdelivr.net/npm/firebase@8.10.0/dist/firebase-auth.js';
+            fallbackAuthScript.onload = () => {
+                console.log('✅ Firebase Auth cargado desde CDN alternativo');
+                resolve();
+            };
+            fallbackAuthScript.onerror = (fallbackError) => {
+                console.error('❌ Error cargando Firebase Auth desde CDN alternativo:', fallbackError);
+                reject(new Error('Error cargando Firebase Auth desde ambos CDNs'));
+            };
+            document.head.appendChild(fallbackAuthScript);
+        };
+        document.head.appendChild(authScript);
     }
 
     // Configurar listener de estado de autenticación
@@ -121,6 +225,21 @@ class AuthService {
             
             if (user) {
                 console.log('✅ Usuario autenticado:', user.email);
+                
+                // 🔄 SINCRONIZAR CON SUPABASE
+                try {
+                    console.log('🔄 Sincronizando usuario con Supabase...');
+                    await this.createUserProfile(user, {
+                        displayName: user.displayName,
+                        email: user.email,
+                        phoneNumber: user.phoneNumber,
+                        photoURL: user.photoURL
+                    });
+                    console.log('✅ Usuario sincronizado con Supabase exitosamente');
+                } catch (syncError) {
+                    console.warn('⚠️ Error sincronizando con Supabase (no crítico):', syncError.message);
+                }
+                
                 await this.saveUserToLocalStorage(user);
                 this.notifyAuthStateChange(true, user);
             } else {
@@ -184,12 +303,28 @@ class AuthService {
             
             console.log('✅ Proveedor de Google configurado');
 
-            // Intentar autenticación con popup
+            // Intentar autenticación con popup primero, si falla usar redirect
             console.log('🪟 Intentando autenticación con popup...');
-            const result = await this.auth.signInWithPopup(provider);
-            
-            console.log('✅ Autenticación con Google exitosa:', result.user.email);
-            return result.user;
+            try {
+                const result = await this.auth.signInWithPopup(provider);
+                console.log('✅ Autenticación con Google exitosa (popup):', result.user.email);
+                return result.user;
+            } catch (popupError) {
+                console.warn('⚠️ Popup falló, intentando con redirect...', popupError);
+                
+                // Si el popup falla por CSP o bloqueo, usar redirect
+                if (popupError.code === 'auth/popup-blocked' || 
+                    popupError.code === 'auth/cancelled-popup-request' ||
+                    popupError.message.includes('popup')) {
+                    
+                    console.log('🔄 Redirigiendo para autenticación con Google...');
+                    await this.auth.signInWithRedirect(provider);
+                    // El redirect no retorna inmediatamente, la página se recargará
+                    return null;
+                } else {
+                    throw popupError;
+                }
+            }
             
         } catch (error) {
             console.error('❌ Error en autenticación con Google:', error);
@@ -426,6 +561,156 @@ class AuthService {
         } catch (error) {
             console.error('Error al enviar email de verificación:', error);
             throw error;
+        }
+    }
+
+    // Iniciar autenticación por email (reemplaza SMS)
+    async signInWithEmail(email) {
+        try {
+            console.log('🔧 Iniciando autenticación por email:', email);
+            
+            // Verificar que Firebase esté inicializado
+            if (!this.auth) {
+                throw new Error('Firebase Auth no está inicializado');
+            }
+
+            console.log('✅ Firebase Auth disponible:', this.auth);
+
+            // Verificar que email auth esté habilitado
+            if (!CONFIG.AUTH_SETTINGS.ENABLE_EMAIL_AUTH) {
+                throw new Error('Autenticación por email no está habilitada');
+            }
+
+            // Enviar link de autenticación por email
+            const actionCodeSettings = {
+                url: window.location.origin, // URL de redirección (misma página)
+                handleCodeInApp: true
+            };
+
+            console.log('📧 Enviando email de verificación a:', email);
+            console.log('🔗 URL de redirección:', actionCodeSettings.url);
+
+            // Enviar email de verificación
+            await this.auth.sendSignInLinkToEmail(email, actionCodeSettings);
+            
+            // Guardar email en localStorage para verificación posterior
+            localStorage.setItem('emailForSignIn', email);
+            
+            console.log('✅ Email de verificación enviado exitosamente');
+            return { success: true, requiresEmailVerification: true };
+            
+        } catch (error) {
+            console.error('❌ Error en autenticación por email:', error);
+            
+            // Manejar errores específicos de email auth
+            if (error.code === 'auth/invalid-email') {
+                throw new Error('El formato del email no es válido');
+            } else if (error.code === 'auth/unauthorized-domain') {
+                throw new Error('Este dominio no está autorizado para enviar emails. Contacta al administrador.');
+            } else if (error.code === 'auth/network-request-failed') {
+                throw new Error('Error de conexión. Verifica tu internet.');
+            } else {
+                throw this.handleAuthError(error);
+            }
+        }
+    }
+
+    // Verificar link de email
+    async verifyEmailLink() {
+        try {
+            // Verificar si el usuario llegó por un link de email
+            if (this.auth.isSignInWithEmailLink(window.location.href)) {
+                let email = localStorage.getItem('emailForSignIn');
+                
+                if (!email) {
+                    // Si no hay email guardado, limpiar la URL y continuar
+                    console.log('ℹ️ No hay email guardado, limpiando URL y continuando...');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    return { success: false, error: 'No hay email guardado' };
+                }
+                
+                // Validar que el email no esté vacío
+                if (!email || email.trim() === '') {
+                    console.log('ℹ️ Email vacío, saltando verificación de email link');
+                    return { success: false, error: 'Email no válido' };
+                }
+                
+                // Completar autenticación
+                const result = await this.auth.signInWithEmailLink(email, window.location.href);
+                const user = result.user;
+                
+                console.log('✅ Usuario autenticado por email:', user);
+                
+                // Limpiar email guardado y URL
+                localStorage.removeItem('emailForSignIn');
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                // Crear o actualizar perfil en Supabase
+                await this.createUserProfile(user, {
+                    email: user.email,
+                    emailVerified: user.emailVerified
+                });
+                
+                return { success: true, user };
+            }
+            
+            return { success: false, error: 'No es un link de verificación válido' };
+            
+        } catch (error) {
+            console.error('❌ Error verificando email:', error);
+            
+            // Limpiar URL en caso de error
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Si es un error de argumento (email inválido), manejarlo silenciosamente
+            if (error.code === 'auth/argument-error' && error.message.includes('First argument "email" must be a valid string')) {
+                console.log('ℹ️ Error de email inválido, saltando verificación de email link');
+                return { success: false, error: 'Email no válido para verificación' };
+            }
+            
+            throw this.handleAuthError(error);
+        }
+    }
+
+    // Método alternativo: Email + Password (más tradicional)
+    async signInWithEmailPassword(email, password) {
+        try {
+            console.log('🔧 Iniciando autenticación con email y contraseña');
+            
+            if (!this.auth) {
+                throw new Error('Firebase Auth no está inicializado');
+            }
+
+            // Intentar crear usuario o iniciar sesión
+            let userCredential;
+            
+            try {
+                // Intentar crear nuevo usuario
+                userCredential = await this.auth.createUserWithEmailAndPassword(email, password);
+                console.log('✅ Nuevo usuario creado');
+            } catch (createError) {
+                if (createError.code === 'auth/email-already-in-use') {
+                    // Usuario ya existe, intentar iniciar sesión
+                    userCredential = await this.auth.signInWithEmailAndPassword(email, password);
+                    console.log('✅ Usuario existente, sesión iniciada');
+                } else {
+                    throw createError;
+                }
+            }
+            
+            const user = userCredential.user;
+            
+            // Crear o actualizar perfil en Supabase
+            await this.createUserProfile(user, {
+                email: user.email,
+                emailVerified: user.emailVerified
+            });
+            
+            return { success: true, user };
+            
+        } catch (error) {
+            console.error('❌ Error en autenticación con email/password:', error);
+            throw this.handleAuthError(error);
         }
     }
 
@@ -735,6 +1020,9 @@ class AuthService {
                 createdAt: new Date().toISOString()
             }));
             
+            // Establecer cookie de autenticación para el servidor
+            this.setAuthCookie(user.uid, userRole);
+            
             console.log('✅ Usuario guardado en localStorage con rol:', userRole);
             console.log('🔍 localStorage USER_ROLE guardado:', localStorage.getItem(CONFIG.STORAGE_KEYS.USER_ROLE));
             console.log('🔍 localStorage USER_DATA guardado:', localStorage.getItem(CONFIG.STORAGE_KEYS.USER_DATA));
@@ -745,13 +1033,46 @@ class AuthService {
         }
     }
 
+    // Establecer cookie de autenticación para el servidor
+    setAuthCookie(uid, role) {
+        try {
+            // Crear un token simple (en producción usar JWT)
+            const token = btoa(`${uid}:${role}:${Date.now()}`);
+            
+            // Establecer cookie que expire en 24 horas
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000));
+            
+            document.cookie = `auth_token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Strict`;
+            
+            console.log('🍪 Cookie de autenticación establecida');
+        } catch (error) {
+            console.error('❌ Error estableciendo cookie de autenticación:', error);
+        }
+    }
+
+    // Limpiar cookie de autenticación
+    clearAuthCookie() {
+        try {
+            // Establecer cookie con fecha de expiración en el pasado para eliminarla
+            document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
+            console.log('🍪 Cookie de autenticación eliminada');
+        } catch (error) {
+            console.error('❌ Error eliminando cookie de autenticación:', error);
+        }
+    }
+
     // Limpiar usuario de localStorage
     clearUserFromLocalStorage() {
         localStorage.removeItem(CONFIG.STORAGE_KEYS.USER_DATA);
         localStorage.removeItem(CONFIG.STORAGE_KEYS.USER_TOKEN);
         localStorage.removeItem(CONFIG.STORAGE_KEYS.USER_UID);
         localStorage.removeItem(CONFIG.STORAGE_KEYS.USER_ROLE);
-        console.log('✅ Usuario limpiado de localStorage');
+        
+        // Limpiar cookie de autenticación
+        this.clearAuthCookie();
+        
+        console.log('✅ Usuario limpiado de localStorage y cookies');
     }
 
     // Obtener usuario de localStorage
@@ -835,6 +1156,15 @@ class AuthService {
         if (this.currentUser) {
             callback(true, this.currentUser);
         }
+        
+        // Retornar función de desuscripción
+        return () => {
+            const index = this.authStateListeners.indexOf(callback);
+            if (index > -1) {
+                this.authStateListeners.splice(index, 1);
+                console.log('✅ Listener de autenticación removido');
+            }
+        };
     }
 
     // Notificar cambio de estado a todos los listeners
