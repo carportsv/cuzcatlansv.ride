@@ -1417,15 +1417,15 @@ function goBack() {
         if (rideManagementService) {
             rideManagementService.loadData().then(() => {
                 console.log('✅ Datos recargados, yendo al home...');
-                window.location.href = '../home.html';
+                window.location.href = '../home/home.html';
             });
         } else {
-            window.location.href = '../home.html';
+            window.location.href = '../home/home.html';
         }
     } else {
         console.log('🏠 Regresando al home...');
         // Regresar directamente a home
-        window.location.href = '../home.html';
+        window.location.href = '../home/home.html';
     }
 }
 
