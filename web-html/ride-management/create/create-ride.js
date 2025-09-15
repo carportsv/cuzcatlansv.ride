@@ -172,16 +172,16 @@ class CreateRideService {
 
             console.log('📋 Ride data:', rideData);
 
-            // Create ride using AdminService
-            console.log('🔍 Checking for window.adminService...');
-            console.log('🔍 window.adminService available:', !!window.adminService);
-            console.log('🔍 window.adminService.createRide available:', !!(window.adminService && window.adminService.createRide));
+            // Create ride using ApiService
+            console.log('🔍 Checking for window.apiService...');
+            console.log('🔍 window.apiService available:', !!window.apiService);
+            console.log('🔍 window.apiService.createRide available:', !!(window.apiService && window.apiService.createRide));
             
-            if (!window.adminService || !window.adminService.createRide) {
-                throw new Error('AdminService or its createRide method is not available globally.');
+            if (!window.apiService || !window.apiService.createRide) {
+                throw new Error('ApiService or its createRide method is not available globally.');
             }
 
-            const result = await window.adminService.createRide(rideData);
+            const result = await window.apiService.createRide(rideData);
             
             if (result) {
                 window.showSuccess('Ride created successfully!');
