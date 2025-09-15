@@ -29,6 +29,28 @@ const CONFIG = {
         MAX_ZOOM: 18,
         TILE_LAYER: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         ATTRIBUTION: '© OpenStreetMap contributors'
+    },
+    // Estados de viajes
+    RIDE_STATUS: {
+        SEARCHING: 'searching',
+        DRIVER_ASSIGNED: 'driver_assigned',
+        ACCEPTED: 'accepted',
+        IN_PROGRESS: 'in_progress',
+        COMPLETED: 'completed',
+        CANCELLED: 'cancelled'
+    },
+    // Configuración de precios
+    PRICING: {
+        BASE_FARE: 2.50,
+        PER_KM_RATE: 0.80,
+        PER_MINUTE_RATE: 0.20,
+        MINIMUM_FARE: 2.50
+    },
+    // Validaciones
+    VALIDATION: {
+        EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        PHONE_REGEX: /^[\+]?[1-9][\d]{0,15}$/,
+        PASSWORD_MIN_LENGTH: 6
     }
 };
 
