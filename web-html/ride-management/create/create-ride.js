@@ -259,7 +259,7 @@ function goBack() {
     if (isFromRideManagement) {
         console.log('🔄 Regresando desde ride-management, recargando datos...');
         // Regresar a ride-management y forzar recarga de datos
-        window.location.href = '../ride-management/ride-management.html';
+        window.location.href = '../ride-management.html';
     } else if (window.history.length > 1) {
         console.log('🔙 Usando history.back()...');
         window.history.back();
