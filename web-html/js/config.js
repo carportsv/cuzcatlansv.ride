@@ -19,7 +19,17 @@ const CONFIG = {
         'taxi-zkt-7f276.firebaseapp.com',
         'carportsv.github.io',
         'carportsv.github.io/zkt_openstreet'
-    ]
+    ],
+    // Configuración de mapas
+    DEFAULT_LAT: 13.6929,
+    DEFAULT_LNG: -89.2182,
+    MAP_CONFIG: {
+        ZOOM: 15,
+        MIN_ZOOM: 10,
+        MAX_ZOOM: 18,
+        TILE_LAYER: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        ATTRIBUTION: '© OpenStreetMap contributors'
+    }
 };
 
 // Exportar configuración
