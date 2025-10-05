@@ -21,10 +21,29 @@ class AdminService {
         };
         
         console.log('🔧 AdminService configurado con Supabase URL:', this.supabaseUrl ? '✅ Configurada' : '❌ No configurada');
+        
+        // Crear cliente Supabase inmediatamente
+        this.createSupabaseClient();
+        
         this.initAdminNotifications();
         
         // Guardar como instancia global
         window.globalAdminService = this;
+    }
+
+    // Crear cliente Supabase
+    createSupabaseClient() {
+        try {
+            if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+                console.warn('⚠️ Supabase no está disponible, no se puede crear cliente');
+                return;
+            }
+            
+            this.supabaseClient = window.supabase.createClient(this.supabaseUrl, this.supabaseKey);
+            console.log('🔧 Cliente Supabase creado exitosamente');
+        } catch (error) {
+            console.error('❌ Error creando cliente Supabase:', error);
+        }
     }
 
     // Inicializar notificaciones en tiempo real para el admin
@@ -38,16 +57,10 @@ class AdminService {
             
             console.log('🔔 Inicializando notificaciones en tiempo real para admin...');
             
-            // Verificar si Supabase está disponible
-            if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
-                console.warn('⚠️ Supabase no está disponible, saltando notificaciones en tiempo real');
-                return;
-            }
-            
-            // Crear cliente Supabase reutilizable si no existe
+            // Verificar si el cliente Supabase está disponible
             if (!this.supabaseClient) {
-                this.supabaseClient = window.supabase.createClient(this.supabaseUrl, this.supabaseKey);
-                console.log('🔧 Cliente Supabase creado y guardado para reutilización');
+                console.warn('⚠️ Cliente Supabase no está disponible, saltando notificaciones en tiempo real');
+                return;
             }
             const supabaseClient = this.supabaseClient;
             
