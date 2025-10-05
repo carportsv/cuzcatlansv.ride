@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>cuzcatlansv.ride - Login</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/components.css">
@@ -93,6 +96,107 @@
             display: block;
             margin-top: 0.5rem;
         }
+        
+        /* Cambiar el fondo para mejor visibilidad */
+        .login-screen {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%) !important;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .form-container {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 3rem !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .login-title {
+            color: #1f2937 !important;
+            text-align: center;
+        }
+        
+        .login-subtitle {
+            color: #6b7280 !important;
+            text-align: center;
+        }
+        
+        /* Estilos para las opciones de Google */
+        .google-option {
+            margin-bottom: 2rem;
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .google-option h3 {
+            color: #1f2937 !important;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        /* Botón Glassmorphism Azul */
+        .google-btn-glass {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.8), rgba(29, 78, 216, 0.7)) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 2px solid rgba(255, 255, 255, 0.6) !important;
+            color: white !important;
+            padding: 16px 32px !important;
+            border-radius: 20px !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 14px !important;
+            margin: 0 auto !important;
+            min-width: 240px !important;
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2) !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .google-btn-glass::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent) !important;
+            transition: left 0.6s ease !important;
+        }
+        
+        .google-btn-glass:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(29, 78, 216, 0.9), rgba(30, 64, 175, 0.85)) !important;
+            border-color: rgba(255, 255, 255, 0.8) !important;
+            transform: translateY(-4px) scale(1.02) !important;
+            box-shadow: 0 15px 50px rgba(59, 130, 246, 0.5), 0 0 30px rgba(59, 130, 246, 0.3) !important;
+        }
+        
+        .google-btn-glass:hover:not(:disabled)::before {
+            left: 100% !important;
+        }
+        
+        .google-btn-glass i {
+            font-size: 1.3rem !important;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
+            z-index: 2 !important;
+            position: relative !important;
+        }
     </style>
 </head>
 <body>
@@ -107,10 +211,14 @@
                     <div class="spinner"></div>
                     <p>Cargando servicios...</p>
                 </div>
-                <button id="googleSignInBtn" class="btn btn-google" style="display: none;">
-                    <i class="fab fa-google"></i>
-                    Iniciar sesión con Google
-                </button>
+                
+                <!-- Botón Glassmorphism Azul -->
+                <div class="google-option">
+                    <button id="googleSignInBtn" class="google-btn-glass" style="display: none;">
+                        <i class="fab fa-google"></i>
+                        Iniciar sesión con Google
+                    </button>
+                </div>
             </div>
             
 
@@ -192,13 +300,41 @@
                     
                                          // Verificar si ya hay un usuario autenticado ANTES de configurar el listener
                      const firebaseUser = window.authService.auth.currentUser;
-                     const storedUser = localStorage.getItem('USER_DATA');
+                     const storedUser = localStorage.getItem(CONFIG.STORAGE_KEYS.USER_DATA);
                      
                      console.log('🔍 Usuario Firebase:', firebaseUser ? 'SÍ' : 'NO');
                      console.log('🔍 Usuario en localStorage:', storedUser ? 'SÍ' : 'NO');
+                     console.log('🔍 localStorage completo:', localStorage);
                      
-                     // Si ya hay usuario autenticado, redirigir inmediatamente
-                     if (firebaseUser) {
+                     // Verificar si se hizo logout recientemente
+                     const logoutFlag = sessionStorage.getItem('logout_flag');
+                     if (logoutFlag === 'true') {
+                         console.log('🚪 Logout detectado, limpiando flag y no procesando autenticación...');
+                         sessionStorage.removeItem('logout_flag');
+                         
+                         // Forzar cierre de sesión de Firebase si aún está activo
+                         if (firebaseUser) {
+                             console.log('🔥 Forzando cierre de sesión de Firebase...');
+                             await window.authService.auth.signOut();
+                             
+                             // Esperar más tiempo para que Firebase procese el logout completamente
+                             await new Promise(resolve => setTimeout(resolve, 1000));
+                         }
+                         
+                         // Limpiar localStorage completamente después del logout
+                         localStorage.clear();
+                         
+                         // Limpiar el flag después de un tiempo para permitir futuras autenticaciones
+                         setTimeout(() => {
+                             sessionStorage.removeItem('logout_flag');
+                             console.log('🧹 Logout flag limpiado después del timeout');
+                         }, 5000);
+                         
+                         return; // No procesar autenticación después de logout
+                     }
+                     
+                     // Si ya hay usuario autenticado Y no hay logout flag, redirigir inmediatamente
+                     if (firebaseUser && firebaseUser.uid && !sessionStorage.getItem('logout_flag')) {
                          console.log('🔐 Usuario ya autenticado, redirigiendo directamente...');
                          
                          if (loadingIndicator) {

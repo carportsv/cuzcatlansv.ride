@@ -803,8 +803,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Global functions for HTML onclick events
 function goBack() {
     console.log('🔙 Going back...');
-    // Regresar directamente a ride-management.html
-    window.location.href = 'ride-management.html';
+    // Regresar directamente a ride-management.html (un nivel arriba)
+    window.location.href = '../ride-management.html';
 }
 
 function loadData() {

@@ -384,7 +384,7 @@ class AcceptedRidesService {
                         showSuccess('Conductor removido. El viaje ahora está en "Crear Viajes"');
                         // Redirect back to main page
                         setTimeout(() => {
-                            window.location.href = 'ride-management.html';
+                            window.location.href = '../ride-management.html';
                         }, 1500);
                         return;
                     }
@@ -1495,8 +1495,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Global functions for HTML onclick events
 function goBack() {
     console.log('🔙 Going back...');
-    // Regresar directamente a ride-management.html
-    window.location.href = 'ride-management.html';
+    // Regresar directamente a ride-management.html (un nivel arriba)
+    window.location.href = '../ride-management.html';
 }
 
 function loadData() {

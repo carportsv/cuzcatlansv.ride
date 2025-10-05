@@ -246,7 +246,7 @@ class MapsService {
                 return [];
             }
 
-            const results = await apiService.searchAddress(query, limit);
+            const results = await window.adminService.searchAddress(query, limit);
             this.addressSearchResults = results;
             
             // Mostrar resultados en el mapa

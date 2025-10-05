@@ -28,8 +28,10 @@ class RideEditService {
     // Show the edit modal
     showModal() {
         const modal = document.getElementById('editRideModal');
+        console.log('🔍 Buscando modal editRideModal:', modal);
         if (modal) {
             modal.style.display = 'flex';
+            console.log('✅ Modal mostrado correctamente');
         } else {
             console.error('❌ Modal editRideModal no encontrado en el DOM');
             this.showError('Modal de edición no disponible');
@@ -39,6 +41,8 @@ class RideEditService {
     // Fill edit form with ride data
     fillEditForm(ride) {
         try {
+            console.log('🔍 Llenando formulario con datos:', ride);
+            
             // Fill form fields
             const idField = document.getElementById('editRideId');
             const originField = document.getElementById('editRideOrigin');
@@ -49,6 +53,16 @@ class RideEditService {
             const priorityField = document.getElementById('editRidePriority');
             const dateField = document.getElementById('editRideScheduledDate');
             const timeField = document.getElementById('editRideScheduledTime');
+            
+            console.log('🔍 Campos encontrados:', {
+                idField: !!idField,
+                originField: !!originField,
+                destinationField: !!destinationField,
+                priceField: !!priceField,
+                clientField: !!clientField,
+                notesField: !!notesField,
+                priorityField: !!priorityField
+            });
             
             if (idField) idField.value = ride.id || '';
             if (originField) originField.value = this.getRideField(ride, 'origin', 'address');
@@ -67,6 +81,15 @@ class RideEditService {
             }
             
             console.log('✅ Formulario de edición llenado correctamente');
+            console.log('📝 Valores finales:', {
+                id: idField?.value,
+                origin: originField?.value,
+                destination: destinationField?.value,
+                price: priceField?.value,
+                client: clientField?.value,
+                notes: notesField?.value,
+                priority: priorityField?.value
+            });
             
         } catch (error) {
             console.error('❌ Error llenando formulario de edición:', error);

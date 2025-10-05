@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="../../css/style.css">
     <link rel="stylesheet" href="../../css/components.css">
     <link rel="stylesheet" href="../../css/responsive.css">
-    <link rel="stylesheet" href="ride-management.css">
+    <link rel="stylesheet" href="../ride-management.css">
+    <link rel="stylesheet" href="cancelled-rides.css">
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 </head>
 <body>
@@ -29,36 +30,36 @@
         <!-- Loading -->
         <div id="loadingScreen" class="loading-screen hidden">
             <div class="loading-spinner"></div>
-            <p>Cargando viajes cancelados...</p>
+            <p>Loading data...</p>
         </div>
 
         <!-- Main Content -->
         <main class="admin-main" id="mainContent" style="display: none;">
             <!-- Cancelled Rides List -->
-            <div id="cancelledRidesList" class="rides-list">
-                <!-- Rides will be loaded here -->
-            </div>
-            
-            <!-- No Data Message -->
-            <div id="noRides" class="no-data-message glassmorphism-card" style="display: none;">
-                <div class="no-data-content">
-                    <div class="no-data-icon">
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <h3>No hay viajes cancelados</h3>
-                    <p>Los viajes cancelados aparecerán aquí cuando sean procesados por el sistema.</p>
-                    <div class="no-data-actions">
-                        <button class="btn btn-primary" onclick="loadData()">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <section class="admin-section">
+                <div id="cancelledRidesList" class="rides-list">
+                    <!-- Rides will be loaded here -->
+                </div>
+                <div id="noRides" class="no-data-message glassmorphism-card" style="display: none;">
+                    <div class="no-data-content">
+                        <div class="no-data-icon">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            Actualizar
-                        </button>
+                        </div>
+                        <h3>No hay viajes cancelados</h3>
+                        <p>Los viajes cancelados aparecerán aquí cuando sean procesados por el sistema.</p>
+                        <div class="no-data-actions">
+                            <button class="btn btn-primary" onclick="loadData()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Actualizar
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </main>
 
         <!-- Notifications -->
@@ -69,7 +70,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/auth.js"></script>
-    <script src="../../js/api.js"></script>
     <script src="../../js/admin.js"></script>
     <script src="cancelled-rides.js"></script>
 </body>

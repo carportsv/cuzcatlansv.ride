@@ -911,7 +911,7 @@ class AuthService {
                 throw new Error('No hay usuario autenticado');
             }
 
-            const profile = await apiService.getUserProfile(this.currentUser.uid);
+            const profile = await window.adminService.getUserProfile(this.currentUser.uid);
             return profile;
         } catch (error) {
             console.error('Error obteniendo perfil de usuario:', error);
@@ -934,7 +934,7 @@ class AuthService {
             }
 
             // Actualizar en Supabase
-            const updatedProfile = await apiService.updateUserProfile(this.currentUser.uid, profileData);
+            const updatedProfile = await window.adminService.updateUserProfile(this.currentUser.uid, profileData);
             
             console.log('Perfil actualizado exitosamente');
             return updatedProfile;

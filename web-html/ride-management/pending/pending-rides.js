@@ -10,11 +10,8 @@ class PendingRidesService {
 
     async init() {
         try {
-            // Initialize ride edit service
-            if (window.rideEditService && window.adminService) {
-                window.rideEditService.init(window.adminService);
-                console.log('✅ RideEditService inicializado en pending-rides');
-            }
+            // Initialize ride edit service with retry
+            this.initializeRideEditService();
             
             await this.loadData();
             this.setupEventListeners();
@@ -25,6 +22,12 @@ class PendingRidesService {
                 console.log('🔄 Viaje actualizado, recargando datos...');
                 this.loadData();
             });
+
+            // Listen for admin service availability
+            document.addEventListener('adminServiceReady', () => {
+                console.log('🔄 AdminService disponible, inicializando RideEditService...');
+                this.initializeRideEditService();
+            });
             
             // Mark service as initialized after successful data load
             serviceInitialized = true;
@@ -32,6 +35,29 @@ class PendingRidesService {
         } catch (error) {
             console.error('❌ Error initializing PendingRidesService:', error);
             showError('Error inicializando el servicio: ' + error.message);
+        }
+    }
+
+    // Initialize ride edit service with retry mechanism
+    initializeRideEditService() {
+        const tryInit = () => {
+            if (window.rideEditService && window.adminService) {
+                window.rideEditService.init(window.adminService);
+                console.log('✅ RideEditService inicializado en pending-rides');
+                return true;
+            }
+            return false;
+        };
+
+        // Try immediately
+        if (!tryInit()) {
+            // If not available, try again after a short delay
+            setTimeout(() => {
+                if (!tryInit()) {
+                    console.warn('⚠️ AdminService no disponible, reintentando en 1 segundo...');
+                    setTimeout(tryInit, 1000);
+                }
+            }, 100);
         }
     }
 
@@ -517,11 +543,11 @@ class PendingRidesService {
 function goBackToRideManagement() {
     console.log('🔙 Going back to ride management...');
     console.log('🔙 Current location:', window.location.href);
-    console.log('🔙 Target location: ride-management.html');
+    console.log('🔙 Target location: ../ride-management.html');
     
     try {
-        // Regresar directamente a ride-management.html
-        window.location.href = 'ride-management.html';
+        // Regresar directamente a ride-management.html (un nivel arriba)
+        window.location.href = '../ride-management.html';
         console.log('✅ Navigation initiated');
     } catch (error) {
         console.error('❌ Error navigating back:', error);
@@ -684,13 +710,13 @@ async function populateDriverOptions() {
             drivers.forEach(driver => {
                 const option = document.createElement('option');
                 option.value = driver.id; // 🔑 USAR drivers.id, NO user_id
-                option.textContent = driver.user?.display_name || driver.user?.email || `Conductor ${driver.id}`;
+                option.textContent = driver.display_name || driver.email || `Conductor ${driver.id}`;
                 driverSelect.appendChild(option);
                 
                 console.log(`✅ Driver agregado al select:`, {
-                    'drivers.id (CORRECTO)': driver.id,
-                    'drivers.user_id': driver.user_id,
-                    'user.email': driver.user?.email,
+                    'driver.id': driver.id,
+                    'driver.display_name': driver.display_name,
+                    'driver.email': driver.email,
                     'texto mostrado': option.textContent
                 });
             });
@@ -731,7 +757,7 @@ async function confirmDriverAssignment(rideId) {
             const drivers = await adminService.getAvailableDrivers();
             const driver = drivers.find(d => d.id === selectedDriverId);
             if (driver) {
-                driverName = driver.user?.display_name || driver.user?.email || `Conductor ${selectedDriverId}`;
+                driverName = driver.display_name || driver.email || `Conductor ${selectedDriverId}`;
             }
         }
     } catch (error) {

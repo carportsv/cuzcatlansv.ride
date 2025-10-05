@@ -601,10 +601,44 @@
         }
 
         // Función para cerrar sesión
-        function handleLogout() {
+        async function handleLogout() {
             if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-                // Aquí iría la lógica de logout
-                window.location.href = '../auth/login.html';
+                try {
+                    console.log('🚪 Cerrando sesión...');
+                    
+                    // Marcar que se hizo logout ANTES de cerrar sesión
+                    sessionStorage.setItem('logout_flag', 'true');
+                    
+                    // Cerrar sesión de Firebase primero
+                    if (window.authService && window.authService.auth) {
+                        console.log('🔥 Cerrando sesión de Firebase...');
+                        await window.authService.auth.signOut();
+                        console.log('✅ Sesión de Firebase cerrada');
+                    }
+                    
+                    // Esperar más tiempo para que Firebase procese el logout completamente
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Limpiar TODOS los datos locales EXCEPTO el logout_flag
+                    localStorage.clear();
+                    // Mantener el logout_flag por un tiempo para evitar redirecciones automáticas
+                    sessionStorage.setItem('logout_flag', 'true');
+                    
+                    // Limpiar cookies si existen
+                    document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    document.cookie = 'user_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    document.cookie = 'user_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    
+                    console.log('✅ Sesión cerrada completamente, redirigiendo al login...');
+                    
+                    // Forzar recarga completa de la página de login
+                    window.location.replace('../auth/login.html');
+                    
+                } catch (error) {
+                    console.error('❌ Error cerrando sesión:', error);
+                    // Redirigir de todas formas
+                    window.location.replace('../auth/login.html');
+                }
             }
         }
 

@@ -14,6 +14,12 @@ class AdminService {
         this.processedNotifications = new Set(); // Para evitar duplicados
         this.supabaseClient = null; // Cliente reutilizable
         
+        // Headers base para requests
+        this.baseHeaders = {
+            'Content-Type': 'application/json',
+            'apikey': this.supabaseKey
+        };
+        
         console.log('🔧 AdminService configurado con Supabase URL:', this.supabaseUrl ? '✅ Configurada' : '❌ No configurada');
         this.initAdminNotifications();
         
@@ -297,7 +303,7 @@ class AdminService {
             console.log('🔧 Inicializando Admin Service...');
             
             // Verificar autenticación
-            const userData = localStorage.getItem('USER_DATA');
+            const userData = localStorage.getItem(CONFIG.STORAGE_KEYS.USER_DATA);
             if (!userData) {
                 console.log('⚠️ Usuario no autenticado');
                 return;
@@ -318,7 +324,7 @@ class AdminService {
             // Verificar que sea admin
             if (this.currentUser.role !== 'admin') {
                 console.log('⚠️ Usuario no es admin, redirigiendo...');
-                window.location.href = '/login.html';
+                window.location.href = '/auth/login.html';
                 return;
             }
             
@@ -497,6 +503,7 @@ class AdminService {
             throw error;
         }
     }
+
 }
 
 // Variables globales
@@ -884,6 +891,10 @@ function initGlobalAdminService() {
         console.log('🌐 Inicializando AdminService globalmente...');
         window.globalAdminService = new AdminService();
         console.log('✅ AdminService global creado');
+        
+        // Dispatch event when admin service is ready
+        document.dispatchEvent(new CustomEvent('adminServiceReady'));
+        console.log('📢 Evento adminServiceReady disparado');
     }
 }
 

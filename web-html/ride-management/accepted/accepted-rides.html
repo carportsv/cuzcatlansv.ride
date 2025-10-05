@@ -7,12 +7,12 @@
     <link rel="stylesheet" href="../../css/style.css">
     <link rel="stylesheet" href="../../css/components.css">
     <link rel="stylesheet" href="../../css/responsive.css">
-    <link rel="stylesheet" href="ride-management.css">
-    <link rel="stylesheet" href="ride-expandable.css">
+    <link rel="stylesheet" href="../ride-management.css">
+    <link rel="stylesheet" href="accepted-rides.css">
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 </head>
 <body>
-    <div class="admin-container">
+    <div class="admin-container accepted-rides">
         <!-- Header -->
         <div class="admin-header">
             <div class="admin-header-content">
@@ -28,39 +28,39 @@
         </div>
 
         <!-- Loading -->
-        <div id="loadingScreen" class="loading-screen">
+        <div id="loadingScreen" class="loading-screen hidden">
             <div class="loading-spinner"></div>
-            <p>Cargando viajes aceptados...</p>
+            <p>Loading data...</p>
         </div>
 
         <!-- Main Content -->
         <main class="admin-main" id="mainContent" style="display: none;">
 
-            <!-- Content -->
-            <div class="rides-list" id="allRidesList">
-                <!-- Rides will be loaded here -->
-            </div>
-
-            <!-- No Data Message -->
-            <div id="noDataMessage" class="no-data-message glassmorphism-card" style="display: none;">
-                <div class="no-data-content">
-                    <div class="no-data-icon">
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <h3>No hay viajes aceptados</h3>
-                    <p>Los viajes aceptados aparecerán aquí cuando los conductores los tomen.</p>
-                    <div class="no-data-actions">
-                        <button class="btn btn-primary" onclick="loadData()">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Accepted Rides List -->
+            <section class="admin-section">
+                <div id="allRidesList" class="rides-list">
+                    <!-- Rides will be loaded here -->
+                </div>
+                <div id="noDataMessage" class="no-data-message glassmorphism-card" style="display: none;">
+                    <div class="no-data-content">
+                        <div class="no-data-icon">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            Actualizar
-                        </button>
+                        </div>
+                        <h3>No hay viajes aceptados</h3>
+                        <p>Los viajes aceptados aparecerán aquí cuando los conductores los tomen.</p>
+                        <div class="no-data-actions">
+                            <button class="btn btn-primary" onclick="loadData()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Actualizar
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </main>
     </div>
 
@@ -152,7 +152,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/auth.js"></script>
-    <script src="../../js/api.js"></script>
     <script src="../../js/admin.js"></script>
     <script src="accepted-rides.js"></script>
 </body>

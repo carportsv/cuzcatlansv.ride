@@ -63,4 +63,4 @@ const CONFIG = {
 
 // Exportar configuración
 window.CONFIG = CONFIG;
-console.log('✅ Configuración de GitHub Pages cargada (placeholders)');
+console.log('✅ Configuración cargada - Los placeholders serán reemplazados por el servidor');

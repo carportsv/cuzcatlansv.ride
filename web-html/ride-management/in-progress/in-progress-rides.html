@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="../../css/style.css">
     <link rel="stylesheet" href="../../css/components.css">
     <link rel="stylesheet" href="../../css/responsive.css">
-    <link rel="stylesheet" href="ride-management.css">
+    <link rel="stylesheet" href="../ride-management.css">
+    <link rel="stylesheet" href="in-progress-rides.css">
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 </head>
 <body>
@@ -35,30 +36,30 @@
         <!-- Main Content -->
         <main class="admin-main" id="mainContent" style="display: none;">
             <!-- In Progress Rides List -->
-            <div id="inProgressRidesList" class="rides-list">
-                <!-- Rides will be loaded here -->
-            </div>
-            
-            <!-- No Data Message -->
-            <div id="noRides" class="no-data-message glassmorphism-card" style="display: none;">
-                <div class="no-data-content">
-                    <div class="no-data-icon">
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <h3>No hay viajes en progreso</h3>
-                    <p>Los viajes en progreso aparecerán aquí cuando los conductores los inicien.</p>
-                    <div class="no-data-actions">
-                        <button class="btn btn-primary" onclick="loadData()">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <section class="admin-section">
+                <div id="inProgressRidesList" class="rides-list">
+                    <!-- Rides will be loaded here -->
+                </div>
+                <div id="noRides" class="no-data-message glassmorphism-card" style="display: none;">
+                    <div class="no-data-content">
+                        <div class="no-data-icon">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
+                                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            Actualizar
-                        </button>
+                        </div>
+                        <h3>No hay viajes en progreso</h3>
+                        <p>Los viajes en progreso aparecerán aquí cuando los conductores los inicien.</p>
+                        <div class="no-data-actions">
+                            <button class="btn btn-primary" onclick="loadData()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Actualizar
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </main>
 
         <!-- Edit Ride Modal -->
@@ -118,7 +119,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/auth.js"></script>
-    <script src="../../js/api.js"></script>
     <script src="../../js/admin.js"></script>
     <script src="in-progress-rides.js"></script>
 </body>

@@ -396,9 +396,6 @@ class RideManagementService {
                         <button class="btn btn-primary" onclick="openDriverSelection('${ride.id}')">
                             👤 Asignar Conductor
                         </button>
-                        <button class="btn btn-outline" onclick="editRide('${ride.id}')">
-                            ✏️ Editar
-                        </button>
                         <button class="btn btn-warning" onclick="cancelRide('${ride.id}')">
                             ❌ Cancelar
                         </button>
@@ -485,9 +482,6 @@ class RideManagementService {
                             🗑️ Eliminar Viaje
                         </button>
                         ` : ''}
-                        <button class="btn btn-sm btn-outline" onclick="editRide('${ride.id}')">
-                            ✏️ Editar
-                        </button>
                         ${ride.status !== 'completed' ? `
                         <button class="btn btn-sm btn-danger" onclick="cancelRide('${ride.id}')">
                             ❌ Cancelar
@@ -1300,74 +1294,7 @@ class RideManagementService {
         }
     }
 
-    // Open edit ride modal
-    openEditRideModal(rideId) {
-        const ride = this.allRides.find(r => r.id === rideId);
-        if (!ride) {
-            showError('Viaje no encontrado');
-            return;
-        }
 
-        // Populate form fields
-        document.getElementById('editClientName').value = ride.client_name || '';
-        document.getElementById('editOrigin').value = ride.origin?.address || '';
-        document.getElementById('editDestination').value = ride.destination?.address || '';
-        document.getElementById('editPrice').value = ride.price || '';
-        document.getElementById('editAdditionalNotes').value = ride.additional_notes || '';
-        document.getElementById('editPriority').value = ride.priority || 'normal';
-
-        // Store ride ID for saving
-        window.currentRideForEdit = rideId;
-
-        // Show modal
-        document.getElementById('editRideModal').style.display = 'flex';
-    }
-
-    // Save ride changes
-    async saveRideChanges() {
-        const rideId = window.currentRideForEdit;
-        if (!rideId) {
-            showError('No hay viaje seleccionado para editar');
-            return;
-        }
-
-        try {
-            const formData = {
-                client_name: document.getElementById('editClientName').value,
-                origin: { address: document.getElementById('editOrigin').value },
-                destination: { address: document.getElementById('editDestination').value },
-                price: parseFloat(document.getElementById('editPrice').value),
-                additional_notes: document.getElementById('editAdditionalNotes').value,
-                priority: document.getElementById('editPriority').value,
-                updated_at: new Date().toISOString()
-            };
-
-            console.log('💾 Saving ride changes:', rideId, formData);
-
-            const response = await fetch(`${this.supabaseUrl}/rest/v1/ride_requests?id=eq.${rideId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': this.supabaseKey,
-                    'Authorization': `Bearer ${this.supabaseKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                console.log('✅ Ride updated successfully');
-                showSuccess('Viaje actualizado exitosamente');
-                closeEditRideModal();
-                await this.loadData(); // Reload data
-            } else {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('❌ Error updating ride:', error);
-            showError('Error al actualizar el viaje: ' + error.message);
-        }
-    }
 
 
 }
@@ -1449,35 +1376,32 @@ function clearAllFilters() {
 
 function navigateToStatusPage(status) {
     console.log(`🧭 Navegando a página de estado: ${status}`);
+    console.log(`🧭 URL actual: ${window.location.href}`);
+    console.log(`🧭 Directorio actual: ${window.location.pathname}`);
     
     // Navegar a la página específica según el estado
     switch(status) {
         case 'requested':
             // Viajes pendientes (sin conductor asignado)
-            window.history.pushState({ from: 'ride-management' }, '', 'pending/pending-rides.html');
+            console.log(`🧭 Navegando a: pending/pending-rides.html`);
             window.location.href = 'pending/pending-rides.html';
             break;
         case 'accepted':
-            // Usar pushState para agregar al historial antes de navegar
-            window.history.pushState({ from: 'ride-management' }, '', 'accepted/accepted-rides.html');
+            // Viajes aceptados
             window.location.href = 'accepted/accepted-rides.html';
             break;
         case 'in_progress':
-            window.history.pushState({ from: 'ride-management' }, '', 'in-progress/in-progress-rides.html');
             window.location.href = 'in-progress/in-progress-rides.html';
             break;
         case 'completed':
-            window.history.pushState({ from: 'ride-management' }, '', 'completed/completed-rides.html');
             window.location.href = 'completed/completed-rides.html';
             break;
         case 'cancelled':
-            window.history.pushState({ from: 'ride-management' }, '', 'cancelled/cancelled-rides.html');
             window.location.href = 'cancelled/cancelled-rides.html';
             break;
         case 'total':
-            // Mostrar todos los viajes en una vista general
-            window.history.pushState({ from: 'ride-management' }, '', 'all-rides.html');
-            window.location.href = 'all-rides.html';
+            // Mostrar todos los viajes en una vista general - redirigir a home
+            window.location.href = '../home/home.html';
             break;
         default:
             console.error('❌ Estado no válido:', status);
@@ -1558,13 +1482,6 @@ function selectDriver(driverId) {
     }
 }
 
-function editRide(rideId) {
-    console.log('✏️ Edit ride:', rideId);
-    
-    if (rideManagementService) {
-        rideManagementService.openEditRideModal(rideId);
-    }
-}
 
 function startRide(rideId) {
     console.log('🚗 Start ride:', rideId);
@@ -1618,20 +1535,11 @@ function closeDriverSelectionModal() {
     window.currentRideForAssignment = null;
 }
 
-function closeEditRideModal() {
-    document.getElementById('editRideModal').style.display = 'none';
-    window.currentRideForEdit = null;
-}
 
 function closeConfirmModal() {
     document.getElementById('confirmModal').style.display = 'none';
 }
 
-function saveRideChanges() {
-    if (rideManagementService) {
-        rideManagementService.saveRideChanges();
-    }
-}
 
 
 

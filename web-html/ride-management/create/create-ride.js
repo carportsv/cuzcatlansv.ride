@@ -19,10 +19,17 @@ class CreateRideService {
         try {
             console.log('👥 Loading available drivers...');
             
-            // 🔧 CORRECCIÓN: Usar adminService.getAvailableDrivers() que ya funciona
-            if (window.adminService) {
-                const drivers = await adminService.getAvailableDrivers();
-                console.log(`✅ ${drivers.length} drivers loaded from adminService`);
+            // Load drivers directly from Supabase
+            const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/users?role=eq.driver&is_active=eq.true&select=id,display_name,email,phone_number&order=display_name.asc`, {
+                headers: {
+                    'apikey': CONFIG.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+                }
+            });
+            
+            if (response.ok) {
+                const drivers = await response.json();
+                console.log(`✅ ${drivers.length} drivers loaded from Supabase`);
                 
                 const driverSelect = document.getElementById('rideUser');
                 if (driverSelect) {
@@ -31,14 +38,14 @@ class CreateRideService {
                     
                     drivers.forEach(driver => {
                         const option = document.createElement('option');
-                        option.value = driver.id; // 🔑 USAR drivers.id, NO user_id
-                        option.textContent = driver.user?.display_name || driver.user?.email || `Conductor ${driver.id}`;
+                        option.value = driver.id;
+                        option.textContent = driver.display_name || driver.email || `Driver ${driver.id}`;
                         driverSelect.appendChild(option);
                         
                         console.log(`✅ Driver agregado al select:`, {
-                            'drivers.id (CORRECTO)': driver.id,
-                            'drivers.user_id': driver.user_id,
-                            'user.email': driver.user?.email,
+                            'driver.id': driver.id,
+                            'driver.display_name': driver.display_name,
+                            'driver.email': driver.email,
                             'texto mostrado': option.textContent
                         });
                     });
@@ -46,7 +53,7 @@ class CreateRideService {
                 
                 return drivers;
             } else {
-                console.error('❌ adminService no disponible');
+                console.error('❌ Error loading drivers:', response.status);
                 return [];
             }
         } catch (error) {
@@ -136,11 +143,58 @@ class CreateRideService {
             
             // Get form data
             const formData = new FormData(document.getElementById('createRideForm'));
+            
+            // Get coordinates from the map markers
+            const originMarker = window.customMarkers?.find(m => m.type === 'origin');
+            const destinationMarker = window.customMarkers?.find(m => m.type === 'destination');
+            
+            console.log('📍 Origin marker:', originMarker);
+            console.log('📍 Destination marker:', destinationMarker);
+            
+            if (!originMarker || !destinationMarker) {
+                showError('Please select both origin and destination points on the map first');
+                return;
+            }
+            
+            const originCoords = { lat: originMarker.lat, lng: originMarker.lng };
+            const destinationCoords = { lat: destinationMarker.lat, lng: destinationMarker.lng };
+            
+            console.log('📍 Origin coords:', originCoords);
+            console.log('📍 Destination coords:', destinationCoords);
+            
+            // Get current user ID from Supabase (not Firebase UID)
+            const userData = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.USER_DATA) || '{}');
+            let userId = null;
+            
+            // Get the Supabase user ID
+            try {
+                const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/users?firebase_uid=eq.${userData.uid}&select=id`, {
+                    headers: {
+                        'apikey': CONFIG.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    if (users && users.length > 0) {
+                        userId = users[0].id;
+                        console.log('✅ User ID from Supabase:', userId);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error getting user ID from Supabase:', error);
+            }
+            
             const rideData = {
-                origin: { address: formData.get('origin') },
-                destination: { address: formData.get('destination') },
-                price: parseFloat(formData.get('price')),
-                distance: parseFloat(formData.get('distance')) || 0,
+                passengerId: userId || userData.uid, // Use Supabase user ID or fallback to Firebase UID
+                originAddress: formData.get('origin'),
+                originLat: originCoords?.lat || 0,
+                originLng: originCoords?.lng || 0,
+                destinationAddress: formData.get('destination'),
+                destinationLat: destinationCoords?.lat || 0,
+                destinationLng: destinationCoords?.lng || 0,
+                estimatedPrice: parseFloat(formData.get('price')),
                 client_name: formData.get('client_name'),
                 additional_notes: formData.get('additional_notes'),
                 driver_id: formData.get('driver_id') || null,
@@ -148,7 +202,7 @@ class CreateRideService {
             };
 
             // Validate required fields
-            if (!rideData.origin.address || !rideData.destination.address || !rideData.price || !rideData.client_name) {
+            if (!rideData.originAddress || !rideData.destinationAddress || !rideData.estimatedPrice || !rideData.client_name) {
                 showError('Please fill in all required fields');
                 return;
             }
@@ -172,25 +226,89 @@ class CreateRideService {
 
             console.log('📋 Ride data:', rideData);
 
-            // Create ride using ApiService
-            console.log('🔍 Checking for window.apiService...');
-            console.log('🔍 window.apiService available:', !!window.apiService);
-            console.log('🔍 window.apiService.createRide available:', !!(window.apiService && window.apiService.createRide));
+            // Create ride directly
+            console.log('🚗 Creating ride via API...');
             
-            if (!window.apiService || !window.apiService.createRide) {
-                throw new Error('ApiService or its createRide method is not available globally.');
+            const requestBody = {
+                user_id: rideData.passengerId,
+                origin: {
+                    address: rideData.originAddress,
+                    coordinates: {
+                        latitude: rideData.originLat,
+                        longitude: rideData.originLng
+                    }
+                },
+                destination: {
+                    address: rideData.destinationAddress,
+                    coordinates: {
+                        latitude: rideData.destinationLat,
+                        longitude: rideData.destinationLng
+                    }
+                },
+                status: 'requested',
+                price: rideData.estimatedPrice,
+                client_name: rideData.client_name,
+                additional_notes: rideData.additional_notes,
+                driver_id: rideData.driver_id,
+                priority: rideData.priority,
+                created_at: new Date().toISOString()
+            };
+
+            console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+            console.log('📤 Request URL:', `${CONFIG.SUPABASE_URL}/rest/v1/ride_requests`);
+            console.log('📤 Headers:', {
+                'Content-Type': 'application/json',
+                'apikey': CONFIG.SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
+                'Authorization': CONFIG.SUPABASE_ANON_KEY ? 'SET' : 'MISSING'
+            });
+
+            const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/ride_requests`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': CONFIG.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            console.log('📥 Response status:', response.status);
+            console.log('📥 Response headers:', response.headers);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.log('❌ Error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
 
-            const result = await window.apiService.createRide(rideData);
+            // Supabase returns empty response for successful POST, so we don't need to parse JSON
+            let result = null;
+            const responseText = await response.text();
+            console.log('📥 Response text:', responseText);
+            
+            if (responseText && responseText.trim()) {
+                try {
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    console.log('⚠️ Response is not JSON, treating as success');
+                    result = { success: true };
+                }
+            } else {
+                console.log('✅ Empty response - ride created successfully');
+                result = { success: true };
+            }
             
             if (result) {
-                window.showSuccess('Ride created successfully!');
-                this.closeCreateRideModal();
+                showSuccess('Viaje creado exitosamente!');
+                console.log('✅ Ride created successfully:', result);
+                
+                // Clear form and markers
                 this.resetForm();
-                await window.loadData();
-                console.log('✅ Ride created:', result);
+                
+                // Close modal after successful creation
+                this.closeCreateRideModal();
             } else {
-                throw new Error('Failed to create ride via AdminService.');
+                throw new Error('Failed to create ride.');
             }
             
         } catch (error) {
@@ -337,17 +455,30 @@ function enableOriginInput() {
     const destinationInput = document.getElementById('rideDestination');
     
     if (originInput) {
+        // Remove readonly attribute
+        originInput.removeAttribute('readonly');
         originInput.readOnly = false;
-        originInput.placeholder = 'Click on the map to select origin...';
+        originInput.placeholder = 'Type origin address here...';
         originInput.focus();
+        
+        // Force styles to ensure visibility
+        originInput.style.background = '#ffffff';
+        originInput.style.backgroundColor = '#ffffff';
+        originInput.style.color = '#1f2937';
+        originInput.style.border = '2px solid #3b82f6';
+        originInput.style.cursor = 'text';
+        originInput.style.opacity = '1';
+        
+        // Enable autocomplete for origin
+        enableAddressAutocomplete(originInput, 'origin');
         
         // Reset destination input state
         if (destinationInput) {
             destinationInput.placeholder = 'Enter destination address...';
         }
         
-        console.log('✏️ Origin input enabled');
-        console.log('✅ Origin input is now ACTIVE for map selection');
+        console.log('✏️ Origin input enabled for typing with autocomplete');
+        console.log('✅ Origin input is now ACTIVE for manual input');
     }
 }
 
@@ -356,17 +487,351 @@ function enableDestinationInput() {
     const destinationInput = document.getElementById('rideDestination');
     
     if (destinationInput) {
+        // Remove readonly attribute
+        destinationInput.removeAttribute('readonly');
         destinationInput.readOnly = false;
-        destinationInput.placeholder = 'Click on the map to select destination...';
+        destinationInput.placeholder = 'Type destination address here...';
         destinationInput.focus();
+        
+        // Force styles to ensure visibility
+        destinationInput.style.background = '#ffffff';
+        destinationInput.style.backgroundColor = '#ffffff';
+        destinationInput.style.color = '#1f2937';
+        destinationInput.style.border = '2px solid #3b82f6';
+        destinationInput.style.cursor = 'text';
+        destinationInput.style.opacity = '1';
+        
+        // Enable autocomplete for destination
+        enableAddressAutocomplete(destinationInput, 'destination');
         
         // Reset origin input state
         if (originInput) {
             originInput.placeholder = 'Enter origin address...';
         }
         
-        console.log('✏️ Destination input enabled');
-        console.log('✅ Destination input is now ACTIVE for map selection');
+        console.log('✏️ Destination input enabled for typing with autocomplete');
+        console.log('✅ Destination input is now ACTIVE for manual input');
+    }
+}
+
+// Autocomplete function for addresses
+function enableAddressAutocomplete(input, type) {
+    let autocompleteTimeout;
+    let autocompleteResults = [];
+    let selectedIndex = -1;
+    
+    // Create autocomplete container
+    const autocompleteContainer = document.createElement('div');
+    autocompleteContainer.className = 'address-autocomplete';
+    autocompleteContainer.style.cssText = `
+        position: fixed !important; 
+        top: 100% !important; 
+        left: 0 !important; 
+        right: 0 !important; 
+        background: white !important;
+        border: 2px solid red !important; 
+        border-radius: 8px !important; 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        z-index: 99999 !important; 
+        max-height: 200px !important; 
+        overflow-y: auto !important; 
+        display: none !important;
+        width: 100% !important;
+    `;
+    
+    // Position the input relatively
+    input.parentElement.style.position = 'relative';
+    input.parentElement.style.zIndex = '1';
+    input.parentElement.appendChild(autocompleteContainer);
+    
+    console.log('📍 Autocomplete container created and positioned');
+    
+    // Search function
+    async function searchAddresses(query) {
+        if (query.length < 3) {
+            hideAutocomplete();
+            return;
+        }
+        
+        try {
+            console.log('🔍 Searching for:', query);
+            
+            // Try multiple APIs with fallback
+            let results = [];
+            let apiUsed = '';
+            
+            // Use Nominatim API directly (completely free)
+            try {
+                const nominatimResponse = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&accept-language=en&extratags=1&namedetails=1&countrycodes=us`,
+                    { 
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'TaxiApp/1.0'
+                        }
+                    }
+                );
+                
+                if (nominatimResponse.ok) {
+                    const data = await nominatimResponse.json();
+                    // Convert Nominatim format to standard format
+                    results = data.map(item => ({
+                        properties: {
+                            name: item.display_name,
+                            city: item.address?.city || item.address?.town || '',
+                            country: item.address?.country || ''
+                        },
+                        geometry: {
+                            coordinates: [parseFloat(item.lon), parseFloat(item.lat)]
+                        }
+                    }));
+                    apiUsed = 'Nominatim';
+                    console.log('✅ Nominatim API success:', results.length, 'results');
+                }
+            } catch (nominatimError) {
+                console.log('❌ Nominatim API failed:', nominatimError.message);
+            }
+            
+            // Final fallback - show mock results
+            if (results.length === 0) {
+                results = [{
+                    properties: {
+                        name: `${query} (Mock result)`,
+                        city: 'Test location',
+                        country: 'Test country'
+                    },
+                    geometry: {
+                        coordinates: [0, 0]
+                    }
+                }];
+                apiUsed = 'Mock';
+                console.log('⚠️ Using mock results');
+            }
+            
+            // Filter and prioritize results for better relevance
+            const filteredResults = results.filter(item => {
+                const name = item.properties?.name || '';
+                const city = item.properties?.city || '';
+                
+                // Prioritize addresses with numbers (specific addresses)
+                if (name.match(/\d/)) return true;
+                
+                // Filter out very generic road names without numbers
+                if (name.match(/^[A-Za-z\s]+(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Ct|Court)$/i) && !name.match(/\d/)) {
+                    return false;
+                }
+                
+                // Filter out "Unknown address"
+                if (name.toLowerCase().includes('unknown')) return false;
+                
+                // Prioritize results with city information
+                if (city && city.length > 0) return true;
+                
+                return true;
+            })
+            .sort((a, b) => {
+                // Sort by relevance: addresses with numbers first, then by city presence
+                const aHasNumber = a.properties?.name?.match(/\d/) ? 1 : 0;
+                const bHasNumber = b.properties?.name?.match(/\d/) ? 1 : 0;
+                const aHasCity = a.properties?.city ? 1 : 0;
+                const bHasCity = b.properties?.city ? 1 : 0;
+                
+                return (bHasNumber + bHasCity) - (aHasNumber + aHasCity);
+            })
+            .slice(0, 5); // Limit to 5 best results
+            
+            console.log(`📍 Using ${apiUsed} API, found ${filteredResults.length} filtered results`);
+            autocompleteResults = filteredResults;
+            showAutocomplete(filteredResults);
+            
+        } catch (error) {
+            console.error('💥 Complete failure:', error);
+            showAutocomplete([{
+                properties: {
+                    name: `Error searching for "${query}"`,
+                    city: 'Please try again'
+                },
+                geometry: { coordinates: [0, 0] }
+            }]);
+        }
+    }
+    
+    // Show autocomplete results
+    function showAutocomplete(results) {
+        console.log('🎯 Showing autocomplete results:', results);
+        autocompleteContainer.innerHTML = '';
+        
+        if (results.length === 0) {
+            autocompleteContainer.innerHTML = '<div class="autocomplete-item" style="padding: 8px 12px; color: #6b7280; font-style: italic;">No addresses found</div>';
+        } else {
+            results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.style.cssText = `
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #f3f4f6;
+                    transition: background-color 0.2s;
+                `;
+                
+                // Photon API format
+                const displayName = result.properties?.name || result.properties?.label || 'Unknown address';
+                const city = result.properties?.city || result.properties?.county || '';
+                const country = result.properties?.country || '';
+                const lat = result.geometry?.coordinates?.[1];
+                const lon = result.geometry?.coordinates?.[0];
+                
+                console.log('📍 Result:', { displayName, city, country, lat, lon });
+                
+                item.innerHTML = `
+                    <div style="font-weight: 500; color: #1f2937;">${displayName}</div>
+                    <div style="font-size: 0.85rem; color: #6b7280;">${city}${city && country ? ', ' : ''}${country}</div>
+                `;
+                
+                item.addEventListener('mouseenter', () => {
+                    item.style.backgroundColor = '#f3f4f6';
+                });
+                
+                item.addEventListener('mouseleave', () => {
+                    item.style.backgroundColor = 'transparent';
+                });
+                
+                item.addEventListener('click', () => {
+                    console.log('🎯 Address selected:', { displayName, lat, lon });
+                    selectAddress({
+                        display_name: displayName,
+                        lat: lat,
+                        lon: lon
+                    });
+                });
+                
+                autocompleteContainer.appendChild(item);
+            });
+        }
+        
+        // Get input position
+        const inputRect = input.getBoundingClientRect();
+        
+        // Set position directly with more explicit styling
+        autocompleteContainer.style.cssText = `
+            position: fixed !important;
+            top: ${inputRect.bottom + 2}px !important;
+            left: ${inputRect.left}px !important;
+            width: ${inputRect.width}px !important;
+            background: white !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            z-index: 99999 !important;
+            max-height: 200px !important;
+            overflow-y: auto !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        `;
+        
+        console.log('✅ Autocomplete container shown at position:', {
+            top: inputRect.bottom + 2,
+            left: inputRect.left,
+            width: inputRect.width
+        });
+        
+        // Force a reflow to ensure the element is rendered
+        autocompleteContainer.offsetHeight;
+    }
+    
+    // Hide autocomplete
+    function hideAutocomplete() {
+        autocompleteContainer.style.display = 'none';
+        selectedIndex = -1;
+    }
+    
+    // Select address
+    function selectAddress(result) {
+        input.value = result.display_name;
+        hideAutocomplete();
+        
+        // Store coordinates for later use
+        input.dataset.lat = result.lat;
+        input.dataset.lon = result.lon;
+        
+        console.log(`📍 ${type} address selected:`, result.display_name);
+    }
+    
+    // Input event listener
+    input.addEventListener('input', (e) => {
+        console.log('🔍 Input changed:', e.target.value);
+        clearTimeout(autocompleteTimeout);
+        autocompleteTimeout = setTimeout(() => {
+            console.log('🚀 Starting address search for:', e.target.value);
+            searchAddresses(e.target.value);
+        }, 300);
+    });
+    
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!input.parentElement.contains(e.target)) {
+            hideAutocomplete();
+        }
+    });
+    
+    // Reposition on scroll
+    window.addEventListener('scroll', () => {
+        if (autocompleteContainer.style.display === 'block') {
+            const inputRect = input.getBoundingClientRect();
+            autocompleteContainer.style.cssText = `
+                position: fixed !important;
+                top: ${inputRect.bottom + 2}px !important;
+                left: ${inputRect.left}px !important;
+                width: ${inputRect.width}px !important;
+                background: white !important;
+                border: 1px solid #e5e7eb !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+                z-index: 99999 !important;
+                max-height: 200px !important;
+                overflow-y: auto !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            `;
+        }
+    });
+    
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+        const items = autocompleteContainer.querySelectorAll('.autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            updateSelection(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && autocompleteResults[selectedIndex]) {
+                selectAddress(autocompleteResults[selectedIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            hideAutocomplete();
+        }
+    });
+    
+    // Update selection highlighting
+    function updateSelection(items) {
+        items.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.style.backgroundColor = '#3b82f6';
+                item.style.color = 'white';
+            } else {
+                item.style.backgroundColor = 'transparent';
+                item.style.color = '#1f2937';
+            }
+        });
     }
 }
 

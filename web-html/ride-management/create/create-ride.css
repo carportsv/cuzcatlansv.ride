@@ -1,5 +1,732 @@
 /* Create Ride - Specific styles for ride creation interface */
 
+/* ===== HEADER STYLES - Exactamente como Gestión de Viajes ===== */
+.admin-header {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding: 1.5rem 2rem !important;
+    border-radius: 15px !important;
+    margin-bottom: 2rem !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+    position: relative !important;
+    text-align: center !important;
+}
+
+.admin-header-content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 10px !important;
+    width: 100% !important;
+}
+
+.admin-header-icon {
+    font-size: 28px !important;
+    color: #1f2937 !important;
+    margin-right: 10px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.admin-title {
+    color: #1f2937 !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+    letter-spacing: 1px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.admin-subtitle {
+    color: #374151 !important;
+    font-size: 14px !important;
+    margin-top: 6px !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.back-btn {
+    background: #3b82f6;
+    border: none;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 0;
+    flex-shrink: 0;
+}
+
+.back-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.header-center {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 !important;
+}
+
+.header-spacer {
+    width: 60px !important; /* Mismo ancho que el botón para balance */
+    flex-shrink: 0 !important;
+}
+
+/* ===== BOTÓN CREATE RIDE - FONDO BLANCO CON TEXTO NEGRO ===== */
+.btn-primary {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-primary:hover {
+    background: #f9fafb !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===== BOTÓN CREATE NEW RIDE EN CONTENIDO - FONDO BLANCO CON TEXTO NEGRO ===== */
+.create-new-ride-btn {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    padding: 1rem 2rem !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    font-size: 1rem !important;
+    margin: 0 auto !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.create-new-ride-btn:hover {
+    background: #f9fafb !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.create-new-ride-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* ===== MODAL MÁS CLARO ===== */
+.modal-clear {
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    border-radius: 32px !important;
+    overflow: hidden !important;
+    border-top-left-radius: 32px !important;
+    border-top-right-radius: 32px !important;
+    border-bottom-left-radius: 32px !important;
+    border-bottom-right-radius: 32px !important;
+}
+
+.modal-clear .modal-header {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0) !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    padding: 1.5rem 2rem !important;
+    border-radius: 32px 32px 0 0 !important;
+    border-top-left-radius: 32px !important;
+    border-top-right-radius: 32px !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.modal-title-section h3 {
+    color: #1f2937 !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    margin: 0 0 0.5rem 0 !important;
+}
+
+.modal-subtitle {
+    color: #6b7280 !important;
+    font-size: 0.9rem !important;
+    margin: 0 !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear .modal-body {
+    background: #ffffff !important;
+    padding: 2rem !important;
+}
+
+.modal-clear .form-group label {
+    color: #374151 !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.modal-clear .form-group input,
+.modal-clear .form-group select,
+.modal-clear .form-group textarea {
+    background: #ffffff !important;
+    border: 2px solid #e5e7eb !important;
+    color: #1f2937 !important;
+    border-radius: 8px !important;
+    padding: 0.875rem 1rem !important;
+    font-size: 0.9rem !important;
+    transition: all 0.3s ease !important;
+}
+
+.modal-clear .form-group input:focus,
+.modal-clear .form-group select:focus,
+.modal-clear .form-group textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+}
+
+.modal-clear .btn-outline {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    color: #374151 !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear .btn-outline:hover {
+    background: #f9fafb !important;
+    border-color: #3b82f6 !important;
+    color: #1f2937 !important;
+}
+
+.modal-clear .modal-footer {
+    background: #f8fafc !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 2rem 2rem 3rem 2rem !important;
+    border-radius: 0 0 32px 32px !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 32px !important;
+    border-bottom-right-radius: 32px !important;
+    margin-top: auto !important;
+}
+
+.modal-clear .btn-primary {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 16px !important;
+}
+
+.modal-clear .btn-primary:hover {
+    background: #2563eb !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.modal-clear .btn-secondary {
+    background: #ffffff !important;
+    color: #6b7280 !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 500 !important;
+    border-radius: 16px !important;
+}
+
+.modal-clear .btn-secondary:hover {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    border-color: #9ca3af !important;
+}
+
+/* ===== FORZAR ESQUINAS REDONDEADAS - MÁXIMA ESPECIFICIDAD ===== */
+.modal-overlay .modal-content.modal-clear {
+    border-radius: 32px !important;
+    border-top-left-radius: 32px !important;
+    border-top-right-radius: 32px !important;
+    border-bottom-left-radius: 32px !important;
+    border-bottom-right-radius: 32px !important;
+    overflow: hidden !important;
+}
+
+.modal-overlay .modal-content.modal-clear .modal-header {
+    border-top-left-radius: 32px !important;
+    border-top-right-radius: 32px !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.modal-overlay .modal-content.modal-clear .modal-footer {
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 32px !important;
+    border-bottom-right-radius: 32px !important;
+}
+
+/* ===== TEXTO NEGRO EN MODAL - CAMBIAR TEXTOS BLANCOS ===== */
+.modal-clear h4,
+.modal-clear .map-header h4 {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+.modal-clear .map-instructions,
+.modal-clear .map-instructions small {
+    color: #374151 !important;
+    background: #f8fafc !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.modal-clear .map-instructions strong {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+.modal-clear .route-info,
+.modal-clear .route-summary,
+.modal-clear .route-distance,
+.modal-clear .route-duration {
+    color: #1f2937 !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+.modal-clear .form-help {
+    color: #6b7280 !important;
+    font-style: normal !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear .btn-sm {
+    color: #374151 !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear .btn-sm:hover {
+    color: #1f2937 !important;
+}
+
+.modal-clear .btn-danger {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border: 1px solid #dc2626 !important;
+}
+
+.modal-clear .btn-danger:hover {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+/* Asegurar que todos los textos en el modal sean negros */
+.modal-clear * {
+    color: inherit !important;
+}
+
+.modal-clear .modal-body * {
+    color: #1f2937 !important;
+}
+
+.modal-clear .modal-body small {
+    color: #6b7280 !important;
+}
+
+.modal-clear .modal-body strong {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+/* ===== AUTOCOMPLETADO DE DIRECCIONES ===== */
+.address-autocomplete {
+    position: fixed !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 99999 !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    display: none !important;
+    width: 100% !important;
+    margin-top: 2px !important;
+}
+
+/* Force visibility when shown */
+.address-autocomplete[style*="display: block"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Fix modal overflow to allow autocomplete to show */
+.modal-clear {
+    overflow: visible !important;
+}
+
+.modal-clear .modal-body {
+    overflow: visible !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+}
+
+.modal-clear .form-section {
+    overflow-y: auto !important;
+    max-height: 60vh !important;
+    padding-right: 1rem !important;
+}
+
+/* Ensure autocomplete is above everything */
+.address-autocomplete {
+    position: fixed !important;
+    z-index: 99999 !important;
+}
+
+.autocomplete-item {
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    transition: background-color 0.2s !important;
+    background: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+.autocomplete-item:hover {
+    background: #f3f4f6 !important;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none !important;
+}
+
+/* Input container positioning */
+.input-with-actions {
+    position: relative !important;
+}
+
+/* ===== CAMPOS DE SOLO LECTURA - FONDO BLANCO - MAYOR ESPECIFICIDAD ===== */
+.modal-clear .form-group input[readonly],
+.modal-clear .input-with-actions input[readonly] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear .form-group input[readonly]:focus,
+.modal-clear .input-with-actions input[readonly]:focus {
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+}
+
+.modal-clear .form-group input[readonly]::placeholder,
+.modal-clear .input-with-actions input[readonly]::placeholder {
+    color: #9ca3af !important;
+    font-style: italic !important;
+}
+
+/* Campos readonly - MÁXIMA ESPECIFICIDAD */
+.modal-clear #rideOrigin[readonly],
+.modal-clear #rideDestination[readonly],
+.modal-clear .input-with-actions #rideOrigin[readonly],
+.modal-clear .input-with-actions #rideDestination[readonly] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+    cursor: not-allowed !important;
+}
+
+/* Campos habilitados para escritura */
+.modal-clear #rideOrigin:not([readonly]),
+.modal-clear #rideDestination:not([readonly]),
+.modal-clear .input-with-actions #rideOrigin:not([readonly]),
+.modal-clear .input-with-actions #rideDestination:not([readonly]) {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #3b82f6 !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+    cursor: text !important;
+}
+
+.modal-clear #rideOrigin:not([readonly]):focus,
+.modal-clear #rideDestination:not([readonly]):focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    outline: none !important;
+}
+
+.modal-clear #rideOrigin::placeholder,
+.modal-clear #rideDestination::placeholder,
+.modal-clear .input-with-actions #rideOrigin::placeholder,
+.modal-clear .input-with-actions #rideDestination::placeholder {
+    color: #9ca3af !important;
+    font-style: italic !important;
+}
+
+/* ===== CAMPOS EN MODO ESCRITURA - ESTILOS ESPECÍFICOS ===== */
+.modal-clear #rideOrigin:not([readonly]),
+.modal-clear #rideDestination:not([readonly]) {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #3b82f6 !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+    cursor: text !important;
+}
+
+.modal-clear #rideOrigin:not([readonly]):focus,
+.modal-clear #rideDestination:not([readonly]):focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    outline: none !important;
+}
+
+.modal-clear #rideOrigin:not([readonly])::placeholder,
+.modal-clear #rideDestination:not([readonly])::placeholder {
+    color: #6b7280 !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+}
+
+/* Inputs con íconos */
+.modal-clear .input-icon {
+    color: #6b7280 !important;
+    font-size: 1.2rem !important;
+}
+
+/* Campos calculados automáticamente */
+.modal-clear .price-display {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 600 !important;
+}
+
+.modal-clear .price-label {
+    color: #6b7280 !important;
+}
+
+.modal-clear .price-value {
+    color: #059669 !important;
+    font-weight: 700 !important;
+}
+
+/* ===== TEXTAREAS Y SELECTS - FONDO BLANCO CON TEXTO NEGRO ===== */
+.modal-clear .form-group textarea,
+.modal-clear .form-group select {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear .form-group textarea:focus,
+.modal-clear .form-group select:focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.modal-clear .form-group textarea::placeholder {
+    color: #9ca3af !important;
+    font-style: italic !important;
+}
+
+/* Textarea específico de notas adicionales */
+.modal-clear #rideAdditionalNotes {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 500 !important;
+    resize: vertical !important;
+}
+
+.modal-clear #rideAdditionalNotes:focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.modal-clear #rideAdditionalNotes::placeholder {
+    color: #9ca3af !important;
+    font-style: italic !important;
+}
+
+/* Select específico de conductor */
+.modal-clear #rideUser {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear #rideUser:focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Select de estado */
+.modal-clear #rideStatus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear #rideStatus:focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* ===== TODOS LOS CAMPOS DEL FORMULARIO - ESTILOS COMPLETOS ===== */
+/* Inputs de texto normales */
+.modal-clear #rideClientName,
+.modal-clear #rideScheduledDate,
+.modal-clear #rideScheduledTime,
+.modal-clear #ridePrice,
+.modal-clear #rideDistance {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear #rideClientName:focus,
+.modal-clear #rideScheduledDate:focus,
+.modal-clear #rideScheduledTime:focus,
+.modal-clear #ridePrice:focus,
+.modal-clear #rideDistance:focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.modal-clear #rideClientName::placeholder,
+.modal-clear #ridePrice::placeholder,
+.modal-clear #rideDistance::placeholder {
+    color: #9ca3af !important;
+    font-style: italic !important;
+}
+
+/* Select de prioridad */
+.modal-clear #ridePriority {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 500 !important;
+}
+
+.modal-clear #ridePriority:focus {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Opciones de select */
+.modal-clear #ridePriority option,
+.modal-clear #rideUser option,
+.modal-clear #rideStatus option {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    font-weight: 500 !important;
+}
+
+/* Campos readonly específicos */
+.modal-clear #rideDistance[readonly] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+}
+
+/* Price display */
+.modal-clear .price-display {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 2px solid #e5e7eb !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 8px !important;
+    margin-top: 0.5rem !important;
+}
+
+/* Form help text */
+.modal-clear .form-help {
+    color: #6b7280 !important;
+    font-style: normal !important;
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
+    margin-top: 0.5rem !important;
+}
+
+/* Asegurar que todos los inputs tengan fondo blanco */
+.modal-clear input[type="text"],
+.modal-clear input[type="number"],
+.modal-clear input[type="date"],
+.modal-clear input[type="time"],
+.modal-clear textarea,
+.modal-clear select {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+/* Placeholders para todos los campos */
+.modal-clear input::placeholder,
+.modal-clear textarea::placeholder {
+    color: #9ca3af !important;
+    font-style: italic !important;
+}
+
+
 /* ===== INFO CARDS ===== */
 .create-ride-info {
     display: grid;
@@ -51,13 +778,13 @@
     margin: 0 0 0.5rem 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: #1f2937;
+    color: #1f2937 !important;
 }
 
 .info-content p {
     margin: 0;
     font-size: 0.9rem;
-    color: #6b7280;
+    color: #374151 !important;
     line-height: 1.4;
 }
 
@@ -67,21 +794,57 @@
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
     height: 70vh;
-    max-height: 600px;
-    min-height: 500px;
+    max-height: 650px;
+    min-height: 550px;
+    flex: 1;
 }
 
 /* Asegurar que el modal sea lo suficientemente grande */
 .modal-large {
     width: 90vw !important;
     max-width: 1200px !important;
-    height: 80vh !important;
-    max-height: 800px !important;
+    height: 85vh !important;
+    max-height: 900px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Modal body con scroll */
+.modal-clear .modal-body {
+    max-height: 75vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 2rem !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 .form-section {
-    overflow-y: auto;
-    padding-right: 1rem;
+    overflow-y: auto !important;
+    padding-right: 1rem !important;
+    max-height: 70vh !important;
+    min-height: 500px !important;
+    flex: 1 !important;
+}
+
+/* Scroll personalizado para el formulario */
+.form-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+.form-section::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.form-section::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.form-section::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .map-section {
@@ -91,10 +854,11 @@
     min-height: 400px;
 }
 
-/* Asegurar que el mapa tenga altura mínima */
+/* Asegurar que el mapa tenga altura controlada */
 .map-section .route-map {
     min-height: 350px !important;
     height: 100% !important;
+    flex: 1 !important;
 }
 
 /* ===== FORM STYLES ===== */
