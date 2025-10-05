@@ -32,7 +32,7 @@ jobs:
         sed -i 's|{{FIREBASE_MESSAGING_SENDER_ID}}|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g' web-html/js/config.js
         sed -i 's|{{FIREBASE_APP_ID}}|${{ secrets.FIREBASE_APP_ID }}|g' web-html/js/config.js
         sed -i 's|{{SUPABASE_URL}}|${{ secrets.SUPABASE_URL }}|g' web-html/js/config.js
-        sed -i 's|{{SUPABASE_ANON_KEY}}|${{ secrets.SUPABASE_ANON_KEY }}|g' web-html/js/config.jsimage.png
+        sed -i 's|{{SUPABASE_ANON_KEY}}|${{ secrets.SUPABASE_ANON_KEY }}|g' web-html/js/config.js
         echo "✅ Placeholders reemplazados en config.js"
         
     - name: Replace secrets in drivers.js
